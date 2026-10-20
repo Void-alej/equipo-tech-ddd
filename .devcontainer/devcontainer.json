@@ -1,5 +1,5 @@
 {
-  "name": "equipo-tech-ddd",
+  "name": "NexusMarket Java 17",
   "image": "mcr.microsoft.com/devcontainers/java:1-17-bookworm",
   "features": {
     "ghcr.io/devcontainers/features/java:1": {
