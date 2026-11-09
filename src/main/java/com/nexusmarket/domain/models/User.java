@@ -11,9 +11,9 @@ import java.util.UUID;
 public class User {
 
     private final UUID id;
-    private final String fullName;
-    private final Email email;
-    private final DocumentId documentId;
+    private String fullName;
+    private Email email;
+    private DocumentId documentId;
     private final UserRole role;
     private UserStatus status;
 
@@ -74,6 +74,29 @@ public class User {
 
     public boolean isActive() {
         return status == UserStatus.ACTIVE;
+    }
+
+    public void updateProfile(
+            String fullName,
+            Email email,
+            DocumentId documentId
+    ) {
+        if (fullName == null || fullName.isBlank()) {
+            throw new IllegalArgumentException(
+                    "El nombre completo es obligatorio.");
+        }
+        if (email == null) {
+            throw new IllegalArgumentException(
+                    "El correo electrónico es obligatorio.");
+        }
+        if (documentId == null) {
+            throw new IllegalArgumentException(
+                    "El documento de identidad es obligatorio.");
+        }
+
+        this.fullName = fullName.trim();
+        this.email = email;
+        this.documentId = documentId;
     }
 
     public void suspend() {

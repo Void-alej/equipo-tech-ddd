@@ -5,9 +5,13 @@ import com.nexusmarket.domain.enums.UserRole;
 import com.nexusmarket.domain.exceptions.DuplicateUserException;
 import com.nexusmarket.domain.exceptions.UnauthorizedUserOperationException;
 import com.nexusmarket.domain.models.User;
+import com.nexusmarket.domain.valueobjects.DocumentId;
+import com.nexusmarket.domain.valueobjects.Email;
 import com.nexusmarket.infrastructure.repositories.InMemoryUserRepository;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+
+import java.util.UUID;
 
 import static org.junit.jupiter.api.Assertions.*;
 
@@ -15,11 +19,21 @@ class UserServiceTest {
 
     private InMemoryUserRepository repository;
     private UserService userService;
+    private User admin;
 
     @BeforeEach
     void setUp() {
         repository = new InMemoryUserRepository();
         userService = new UserService(repository);
+
+        admin = new User(
+                UUID.randomUUID(),
+                "Administrador",
+                new Email("admin@example.com"),
+                new DocumentId("CC10002"),
+                UserRole.ADMINISTRATOR
+        );
+        repository.save(admin);
     }
 
     @Test
@@ -33,7 +47,7 @@ class UserServiceTest {
         assertEquals(UserRole.BUYER, buyer.getRole());
         assertTrue(buyer.isActive());
         assertEquals("laura@example.com", buyer.getEmail().getValue());
-        assertEquals(1, repository.findAll().size());
+        assertEquals(2, repository.findAll().size());
     }
 
     @Test
@@ -66,22 +80,6 @@ class UserServiceTest {
 
     @Test
     void shouldAllowAdministratorToRegisterSeller() {
-        User administrator = userService.registerBuyer(
-                "Admin temporal",
-                "admin@example.com",
-                "CC10001"
-        );
-
-        // Para esta prueba se construye un administrador explícitamente.
-        User admin = new User(
-                java.util.UUID.randomUUID(),
-                "Administrador",
-                new com.nexusmarket.domain.valueobjects.Email("admin2@example.com"),
-                new com.nexusmarket.domain.valueobjects.DocumentId("CC10002"),
-                UserRole.ADMINISTRATOR
-        );
-        repository.save(admin);
-
         User seller = userService.registerUserByAdministrator(
                 admin,
                 "Tienda Central",
@@ -123,6 +121,144 @@ class UserServiceTest {
                         "laura@example.com",
                         "CC12345"
                 )
+        );
+    }
+
+    @Test
+    void shouldGetAllUsersAsAdministrator() {
+        userService.registerBuyer(
+                "Laura Pérez",
+                "laura@example.com",
+                "CC12345"
+        );
+
+        assertEquals(2, userService.getAllUsers(admin).size());
+    }
+
+    @Test
+    void shouldGetUserByIdAsAdministrator() {
+        User buyer = userService.registerBuyer(
+                "Laura Pérez",
+                "laura@example.com",
+                "CC12345"
+        );
+
+        User result = userService.getUserById(admin, buyer.getId());
+
+        assertEquals(buyer.getId(), result.getId());
+        assertEquals("Laura Pérez", result.getFullName());
+    }
+
+    @Test
+    void shouldUpdateUserProfile() {
+        User buyer = userService.registerBuyer(
+                "Laura Pérez",
+                "laura@example.com",
+                "CC12345"
+        );
+
+        User updated = userService.updateUserByAdministrator(
+                admin,
+                buyer.getId(),
+                "Laura Gómez",
+                "laura.gomez@example.com",
+                "CC54321"
+        );
+
+        assertEquals("Laura Gómez", updated.getFullName());
+        assertEquals("laura.gomez@example.com", updated.getEmail().getValue());
+        assertEquals("CC54321", updated.getDocumentId().getValue());
+        assertEquals(UserRole.BUYER, updated.getRole());
+    }
+
+    @Test
+    void shouldRejectDuplicateEmailWhenUpdatingUser() {
+        User first = userService.registerBuyer(
+                "Laura Pérez",
+                "laura@example.com",
+                "CC12345"
+        );
+        User second = userService.registerBuyer(
+                "Carlos Gómez",
+                "carlos@example.com",
+                "CC67890"
+        );
+
+        assertThrows(
+                DuplicateUserException.class,
+                () -> userService.updateUserByAdministrator(
+                        admin,
+                        second.getId(),
+                        "Carlos Gómez",
+                        "laura@example.com",
+                        "CC67890"
+                )
+        );
+    }
+
+    @Test
+    void shouldRejectDuplicateDocumentWhenUpdatingUser() {
+        User first = userService.registerBuyer(
+                "Laura Pérez",
+                "laura@example.com",
+                "CC12345"
+        );
+        User second = userService.registerBuyer(
+                "Carlos Gómez",
+                "carlos@example.com",
+                "CC67890"
+        );
+
+        assertThrows(
+                DuplicateUserException.class,
+                () -> userService.updateUserByAdministrator(
+                        admin,
+                        second.getId(),
+                        "Carlos Gómez",
+                        "carlos@example.com",
+                        "CC12345"
+                )
+        );
+    }
+
+    @Test
+    void shouldSuspendUser() {
+        User buyer = userService.registerBuyer(
+                "Laura Pérez",
+                "laura@example.com",
+                "CC12345"
+        );
+
+        User suspended = userService.suspendUser(admin, buyer.getId());
+
+        assertFalse(suspended.isActive());
+    }
+
+    @Test
+    void shouldActivateSuspendedUser() {
+        User buyer = userService.registerBuyer(
+                "Laura Pérez",
+                "laura@example.com",
+                "CC12345"
+        );
+        userService.suspendUser(admin, buyer.getId());
+
+        User activated = userService.activateUser(admin, buyer.getId());
+
+        assertTrue(activated.isActive());
+    }
+
+    @Test
+    void shouldRejectUserAdministrationByBuyer() {
+        User buyer = userService.registerBuyer(
+                "Laura Pérez",
+                "laura@example.com",
+                "CC12345"
+        );
+
+        assertThrows(
+                UnauthorizedUserOperationException.class,
+                () -> userService.suspendUser(buyer, buyer.getId())
         );
     }
 }
