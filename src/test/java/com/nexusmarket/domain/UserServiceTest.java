@@ -173,7 +173,7 @@ class UserServiceTest {
 
     @Test
     void shouldRejectDuplicateEmailWhenUpdatingUser() {
-        User first = userService.registerBuyer(
+        userService.registerBuyer(
                 "Laura Pérez",
                 "laura@example.com",
                 "CC12345"
@@ -198,7 +198,7 @@ class UserServiceTest {
 
     @Test
     void shouldRejectDuplicateDocumentWhenUpdatingUser() {
-        User first = userService.registerBuyer(
+        userService.registerBuyer(
                 "Laura Pérez",
                 "laura@example.com",
                 "CC12345"
@@ -259,6 +259,23 @@ class UserServiceTest {
         assertThrows(
                 UnauthorizedUserOperationException.class,
                 () -> userService.suspendUser(buyer, buyer.getId())
+        );
+    }
+
+    @Test
+    void shouldRejectUserListingBySupervisor() {
+        User supervisor = new User(
+                UUID.randomUUID(),
+                "Supervisor",
+                new Email("supervisor@example.com"),
+                new DocumentId("CC10003"),
+                UserRole.SUPERVISOR
+        );
+        repository.save(supervisor);
+
+        assertThrows(
+                UnauthorizedUserOperationException.class,
+                () -> userService.getAllUsers(supervisor)
         );
     }
 }
