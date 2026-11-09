@@ -1,13 +1,16 @@
 package com.nexusmarket.application.services;
 
 import com.nexusmarket.domain.enums.CartStatus;
+import com.nexusmarket.domain.enums.BuyerCommercialStatus;
 import com.nexusmarket.domain.enums.UserRole;
 import com.nexusmarket.domain.exceptions.UnauthorizedUserOperationException;
 import com.nexusmarket.domain.models.Cart;
+import com.nexusmarket.domain.models.BuyerProfile;
 import com.nexusmarket.domain.models.CartItem;
 import com.nexusmarket.domain.models.Product;
 import com.nexusmarket.domain.models.User;
 import com.nexusmarket.domain.ports.out.ProductRepository;
+import com.nexusmarket.domain.ports.out.BuyerProfileRepository;
 import com.nexusmarket.domain.ports.out.UserRepository;
 
 import java.util.List;
@@ -19,19 +22,23 @@ public class CartService {
 
     private final UserRepository userRepository;
     private final ProductRepository productRepository;
+    private final BuyerProfileRepository buyerProfileRepository;
     private final Map<UUID, Cart> carts = new ConcurrentHashMap<>();
 
     public CartService(
             UserRepository userRepository,
-            ProductRepository productRepository) {
+            ProductRepository productRepository,
+            BuyerProfileRepository buyerProfileRepository) {
 
-        if (userRepository == null || productRepository == null) {
+        if (userRepository == null || productRepository == null
+                || buyerProfileRepository == null) {
             throw new IllegalArgumentException(
-                    "Los repositorios de usuarios y productos son obligatorios.");
+                    "Los repositorios de usuarios, productos y perfiles de compradores son obligatorios.");
         }
 
         this.userRepository = userRepository;
         this.productRepository = productRepository;
+        this.buyerProfileRepository = buyerProfileRepository;
     }
 
     public Cart createCart(User actor) {
@@ -158,6 +165,17 @@ public class CartService {
                 || registeredUser.getRole() != UserRole.BUYER) {
             throw new UnauthorizedUserOperationException(
                     "El usuario registrado no puede utilizar el carrito.");
+        }
+
+        BuyerProfile profile = buyerProfileRepository
+                .findByBuyerId(registeredUser.getId())
+                .orElseThrow(() -> new UnauthorizedUserOperationException(
+                        "El comprador no tiene un perfil comercial registrado."));
+
+        if (profile.getCommercialStatus() != BuyerCommercialStatus.ACTIVE) {
+            throw new UnauthorizedUserOperationException(
+                    "El comprador tiene el estado comercial INACTIVE "
+                            + "y no puede realizar compras.");
         }
     }
 

@@ -5,7 +5,9 @@ import com.nexusmarket.application.services.CartService;
 import com.nexusmarket.application.services.InventoryService;
 import com.nexusmarket.application.services.OrderService;
 import com.nexusmarket.application.services.ShipmentService;
+import com.nexusmarket.domain.enums.BuyerCommercialStatus;
 import com.nexusmarket.domain.enums.OrderStatus;
+import com.nexusmarket.domain.models.BuyerProfile;
 import com.nexusmarket.domain.enums.PaymentStatus;
 import com.nexusmarket.domain.enums.ShipmentStatus;
 import com.nexusmarket.domain.enums.ProductType;
@@ -41,6 +43,7 @@ class OrderInventoryIntegrationTest {
 
     private UserRepository userRepository;
     private ProductRepository productRepository;
+    private BuyerProfileRepository buyerProfileRepository;
     private OrderRepository orderRepository;
     private InventoryRepository inventoryRepository;
     private InventoryMovementRepository movementRepository;
@@ -86,6 +89,7 @@ class OrderInventoryIntegrationTest {
     void setUp() {
         userRepository = new InMemoryUserRepository();
         productRepository = new InMemoryProductRepository();
+        buyerProfileRepository = new InMemoryBuyerProfileRepository();
 
         failingOrderRepository = new FailingOrderRepository();
         orderRepository = failingOrderRepository;
@@ -107,6 +111,10 @@ class OrderInventoryIntegrationTest {
         userRepository.save(seller);
         userRepository.save(logistics);
 
+        buyerProfileRepository.save(new BuyerProfile(
+                buyer.getId(), "Dirección principal", List.of(),
+                BuyerCommercialStatus.ACTIVE));
+
         product = new Product(
                 UUID.randomUUID(),
                 seller.getId(),
@@ -127,7 +135,8 @@ class OrderInventoryIntegrationTest {
         );
         warehouseRepository.save(warehouse);
 
-        cartService = new CartService(userRepository, productRepository);
+        cartService = new CartService(
+                userRepository, productRepository, buyerProfileRepository);
 
         inventoryService = new InventoryService(
                 inventoryRepository,
