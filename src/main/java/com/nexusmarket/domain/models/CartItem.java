@@ -8,7 +8,7 @@ public class CartItem {
     private final UUID productId;
     private final String productName;
     private final BigDecimal unitPrice;
-    private int quantity;
+    private final int quantity;
 
     public CartItem(
             UUID productId,
@@ -33,21 +33,6 @@ public class CartItem {
         this.productName = productName;
         this.unitPrice = unitPrice;
         this.quantity = quantity;
-    }
-
-    public void increaseQuantity(int amount) {
-        if (amount <= 0) {
-            throw new IllegalArgumentException("El incremento debe ser mayor que cero.");
-        }
-        quantity += amount;
-    }
-
-    public void decreaseQuantity(int amount) {
-        if (amount <= 0 || amount >= quantity) {
-            throw new IllegalArgumentException(
-                    "La reducción debe ser positiva y menor que la cantidad actual.");
-        }
-        quantity -= amount;
     }
 
     public BigDecimal getSubtotal() {

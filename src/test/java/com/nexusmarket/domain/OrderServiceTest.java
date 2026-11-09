@@ -1,6 +1,7 @@
 package com.nexusmarket.domain;
 
 import com.nexusmarket.application.services.CartService;
+import com.nexusmarket.application.dto.SellerOrderView;
 import com.nexusmarket.application.services.OrderService;
 import com.nexusmarket.domain.enums.OrderStatus;
 import com.nexusmarket.domain.enums.PaymentStatus;
@@ -23,6 +24,7 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
 import java.math.BigDecimal;
+import java.util.List;
 import java.util.UUID;
 
 import static org.junit.jupiter.api.Assertions.*;
@@ -113,6 +115,22 @@ class OrderServiceTest {
     }
 
     @Test
+    void shouldCancelOrderWhenPaymentIsRejectedAndPreventRetry() {
+        Order order = createOrder();
+
+        orderService.registerPayment(buyer, order.getId(), false);
+
+        assertEquals(OrderStatus.CANCELLED, order.getStatus());
+        assertEquals(PaymentStatus.REJECTED, order.getPaymentStatus());
+
+        assertThrows(
+                IllegalStateException.class,
+                () -> orderService.registerPayment(
+                        buyer, order.getId(), true)
+        );
+    }
+
+    @Test
     void shouldRejectDispatchBeforePayment() {
         Order order = createOrder();
 
@@ -160,6 +178,143 @@ class OrderServiceTest {
 
         assertEquals(2, orderService.getMyOrders(buyer).size());
         assertTrue(orderService.getMyOrders(otherBuyer).isEmpty());
+    }
+
+    @Test
+    void shouldKeepCartActiveWhenOrderSaveFails() {
+        Cart cart = createCartWithProduct();
+
+        OrderRepository failingRepository = new InMemoryOrderRepository() {
+            @Override
+            public void save(Order order) {
+                throw new IllegalStateException(
+                        "Error simulado al guardar el pedido.");
+            }
+        };
+
+        OrderService failingOrderService = new OrderService(
+                cartService,
+                failingRepository,
+                userRepository
+        );
+
+        assertThrows(IllegalStateException.class,
+                () -> failingOrderService.createOrderFromCart(
+                        buyer, cart.getId()));
+
+        assertEquals(
+                com.nexusmarket.domain.enums.CartStatus.ACTIVE,
+                cart.getStatus()
+        );
+    }
+
+    @Test
+    void shouldRejectOrderWhenProductIsSuspendedAfterAddingToCart() {
+        Cart cart = createCartWithProduct();
+
+        // El comprador agregó el producto cuando estaba publicado.
+        // Después, el vendedor lo suspende.
+        product.suspend();
+        productRepository.save(product);
+
+        assertThrows(IllegalStateException.class,
+                () -> orderService.createOrderFromCart(buyer, cart.getId()));
+
+        assertEquals(
+                com.nexusmarket.domain.enums.CartStatus.ACTIVE,
+                cart.getStatus());
+
+        assertTrue(orderRepository.findAll().isEmpty());
+    }
+
+    @Test
+    void shouldExposeOnlySellerOwnItemsInMixedSellerOrder() {
+        User secondSeller = createUser(
+                "Segundo vendedor",
+                "seller2@example.com",
+                "NIT41002",
+                UserRole.SELLER
+        );
+        userRepository.save(secondSeller);
+
+        Product secondProduct = new Product(
+                UUID.randomUUID(),
+                secondSeller.getId(),
+                "Mouse",
+                "Mouse inalámbrico",
+                ProductType.PHYSICAL,
+                new BigDecimal("50000")
+        );
+        secondProduct.publish();
+        productRepository.save(secondProduct);
+
+        Cart cart = createCartWithProduct();
+        cartService.addProduct(
+                buyer, cart.getId(), secondProduct.getId(), 1);
+
+        Order order = orderService.createOrderFromCart(
+                buyer, cart.getId());
+
+        OrderService sellerQueryService = new OrderService(
+                cartService,
+                orderRepository,
+                userRepository,
+                productRepository
+        );
+
+        List<SellerOrderView> sellerOrders =
+                sellerQueryService.getMySellerOrders(seller);
+
+        assertEquals(1, sellerOrders.size());
+
+        SellerOrderView sellerView = sellerOrders.get(0);
+
+        assertEquals(order.getId(), sellerView.orderId());
+        assertEquals(1, sellerView.items().size());
+        assertEquals(product.getId(),
+                sellerView.items().get(0).getProductId());
+        assertEquals(new BigDecimal("240000"), sellerView.getTotal());
+    }
+
+    @Test
+    void shouldRejectSellerAccessToOrdersWithoutTheirProducts() {
+        Order order = createOrder();
+
+        User unrelatedSeller = createUser(
+                "Vendedor externo",
+                "external@example.com",
+                "NIT41003",
+                UserRole.SELLER
+        );
+        userRepository.save(unrelatedSeller);
+
+        OrderService sellerQueryService = new OrderService(
+                cartService,
+                orderRepository,
+                userRepository,
+                productRepository
+        );
+
+        assertThrows(
+                UnauthorizedUserOperationException.class,
+                () -> sellerQueryService.getSellerOrder(
+                        unrelatedSeller, order.getId())
+        );
+    }
+
+    @Test
+    void shouldRejectBuyerWhenRequestingSellerOrders() {
+        OrderService sellerQueryService = new OrderService(
+                cartService,
+                orderRepository,
+                userRepository,
+                productRepository
+        );
+
+        assertThrows(
+                UnauthorizedUserOperationException.class,
+                () -> sellerQueryService.getMySellerOrders(buyer)
+        );
     }
 
     private Cart createCartWithProduct() {

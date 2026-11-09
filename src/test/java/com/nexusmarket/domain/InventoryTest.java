@@ -5,6 +5,8 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
 import java.util.UUID;
+import java.util.concurrent.*;
+import java.util.concurrent.atomic.AtomicInteger;
 
 import static org.junit.jupiter.api.Assertions.*;
 
@@ -58,6 +60,32 @@ class InventoryTest {
     }
 
     @Test
+    void shouldPreserveInventoryWhenReservationFails() {
+        assertThrows(
+                IllegalStateException.class,
+                () -> inventory.reserve(11)
+        );
+
+        assertEquals(10, inventory.getQuantity());
+        assertEquals(0, inventory.getReservedQuantity());
+        assertEquals(10, inventory.getAvailableQuantity());
+    }
+
+    @Test
+    void shouldPreserveInventoryWhenSaleFails() {
+        inventory.reserve(3);
+
+        assertThrows(
+                IllegalStateException.class,
+                () -> inventory.registerSale(4)
+        );
+
+        assertEquals(10, inventory.getQuantity());
+        assertEquals(3, inventory.getReservedQuantity());
+        assertEquals(7, inventory.getAvailableQuantity());
+    }
+
+    @Test
     void shouldRejectNegativeAdjustment() {
         assertThrows(
                 IllegalArgumentException.class,
@@ -82,6 +110,65 @@ class InventoryTest {
 
         assertEquals(2, inventory.getReservedQuantity());
         assertEquals(8, inventory.getAvailableQuantity());
+    }
+
+    @Test
+    void shouldPreventConcurrentReservationsAboveAvailableStock()
+            throws Exception {
+
+        int numberOfThreads = 10;
+
+        ExecutorService executor =
+                Executors.newFixedThreadPool(numberOfThreads);
+
+        CountDownLatch ready = new CountDownLatch(numberOfThreads);
+        CountDownLatch startSignal = new CountDownLatch(1);
+
+        AtomicInteger successfulReservations = new AtomicInteger();
+
+        try {
+            Future<?>[] futures = new Future<?>[numberOfThreads];
+
+            for (int i = 0; i < numberOfThreads; i++) {
+                futures[i] = executor.submit(() -> {
+                    ready.countDown();
+
+                    if (!startSignal.await(5, TimeUnit.SECONDS)) {
+                        throw new IllegalStateException(
+                                "No se inició la prueba concurrente.");
+                    }
+
+                    try {
+                        inventory.reserve(2);
+                        successfulReservations.incrementAndGet();
+                    } catch (IllegalStateException expected) {
+                        assertEquals(
+                                "No hay suficientes unidades disponibles para reservar.",
+                                expected.getMessage()
+                        );
+                    }
+
+                    return null;
+                });
+            }
+
+            assertTrue(ready.await(5, TimeUnit.SECONDS));
+            startSignal.countDown();
+
+            for (Future<?> future : futures) {
+                future.get(10, TimeUnit.SECONDS);
+            }
+
+            assertEquals(5, successfulReservations.get());
+            assertEquals(10, inventory.getQuantity());
+            assertEquals(10, inventory.getReservedQuantity());
+            assertEquals(0, inventory.getAvailableQuantity());
+
+        } finally {
+            startSignal.countDown();
+            executor.shutdownNow();
+            assertTrue(executor.awaitTermination(5, TimeUnit.SECONDS));
+        }
     }
 
     @Test

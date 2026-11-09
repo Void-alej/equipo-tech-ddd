@@ -46,24 +46,24 @@ public class Inventory {
         return warehouseId;
     }
 
-    public int getQuantity() {
+    public synchronized int getQuantity() {
         return quantity;
     }
 
-    public int getReservedQuantity() {
+    public synchronized int getReservedQuantity() {
         return reservedQuantity;
     }
 
-    public int getAvailableQuantity() {
+    public synchronized int getAvailableQuantity() {
         return quantity - reservedQuantity;
     }
 
-    public void addStock(int amount) {
+    public synchronized void addStock(int amount) {
         requirePositive(amount);
         quantity = Math.addExact(quantity, amount);
     }
 
-    public void reserve(int amount) {
+    public synchronized void reserve(int amount) {
         requirePositive(amount);
 
         if (amount > getAvailableQuantity()) {
@@ -75,7 +75,7 @@ public class Inventory {
         reservedQuantity = Math.addExact(reservedQuantity, amount);
     }
 
-    public void releaseReservation(int amount) {
+    public synchronized void releaseReservation(int amount) {
         requirePositive(amount);
 
         if (amount > reservedQuantity) {
@@ -87,7 +87,7 @@ public class Inventory {
         reservedQuantity -= amount;
     }
 
-    public void registerSale(int amount) {
+    public synchronized void registerSale(int amount) {
         requirePositive(amount);
 
         if (amount > reservedQuantity) {
@@ -100,7 +100,7 @@ public class Inventory {
         reservedQuantity -= amount;
     }
 
-    public void adjustStock(int newQuantity) {
+    public synchronized void adjustStock(int newQuantity) {
         if (newQuantity < 0) {
             throw new IllegalArgumentException(
                     "El inventario no puede ser negativo."
@@ -115,9 +115,29 @@ public class Inventory {
         quantity = newQuantity;
     }
 
-    public void registerReturn(int amount) {
+    public synchronized void registerReturn(int amount) {
         requirePositive(amount);
         quantity = Math.addExact(quantity, amount);
+    }
+
+    public synchronized void reverseReturn(int amount) {
+        requirePositive(amount);
+
+        if (amount > getAvailableQuantity()) {
+            throw new IllegalStateException(
+                    "No se puede revertir la devolución: "
+                    + "la cantidad ya no está disponible."
+            );
+        }
+
+        quantity -= amount;
+    }
+
+    public synchronized Inventory copy() {
+        Inventory copy = new Inventory(
+                id, productId, warehouseId, quantity);
+        copy.reservedQuantity = reservedQuantity;
+        return copy;
     }
 
     private void requirePositive(int amount) {

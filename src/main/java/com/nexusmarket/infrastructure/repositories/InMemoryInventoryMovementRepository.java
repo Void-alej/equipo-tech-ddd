@@ -27,6 +27,13 @@ public class InMemoryInventoryMovementRepository
     }
 
     @Override
+    public void deleteById(UUID movementId) {
+        if (movementId != null) {
+            movements.remove(movementId);
+        }
+    }
+
+    @Override
     public List<InventoryMovement> findByInventoryId(UUID inventoryId) {
         return movements.values().stream()
                 .filter(m -> m.getInventoryId().equals(inventoryId))

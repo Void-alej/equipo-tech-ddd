@@ -18,6 +18,8 @@ import com.nexusmarket.domain.ports.out.WarehouseRepository;
 
 import java.util.List;
 import java.util.UUID;
+import java.util.concurrent.locks.ReentrantLock;
+import java.util.function.Supplier;
 
 public class InventoryService {
 
@@ -48,7 +50,64 @@ public class InventoryService {
         this.userRepository = userRepository;
     }
 
+
     public Inventory addStock(
+            User actor, UUID productId, UUID warehouseId,
+            int quantity, String description) {
+        return withInventoryLock(productId, warehouseId,
+                () -> addStockLocked(actor, productId, warehouseId,
+                        quantity, description));
+    }
+
+    public Inventory reserveStock(
+            User actor, UUID productId, UUID warehouseId,
+            int quantity, String description) {
+        return withInventoryLock(productId, warehouseId,
+                () -> reserveStockLocked(actor, productId, warehouseId,
+                        quantity, description));
+    }
+
+    public Inventory releaseReservation(
+            User actor, UUID productId, UUID warehouseId,
+            int quantity, String description) {
+        return withInventoryLock(productId, warehouseId,
+                () -> releaseReservationLocked(actor, productId, warehouseId,
+                        quantity, description));
+    }
+
+    public Inventory registerSale(
+            User actor, UUID productId, UUID warehouseId,
+            int quantity, String description) {
+        return withInventoryLock(productId, warehouseId,
+                () -> registerSaleLocked(actor, productId, warehouseId,
+                        quantity, description));
+    }
+
+    public Inventory adjustStock(
+            User actor, UUID productId, UUID warehouseId,
+            int newQuantity, String description) {
+        return withInventoryLock(productId, warehouseId,
+                () -> adjustStockLocked(actor, productId, warehouseId,
+                        newQuantity, description));
+    }
+
+    public Inventory registerReturn(
+            User actor, UUID productId, UUID warehouseId,
+            int quantity, String description) {
+        return withInventoryLock(productId, warehouseId,
+                () -> registerReturnLocked(actor, productId, warehouseId,
+                        quantity, description));
+    }
+
+    public Inventory reverseReturn(
+            User actor, UUID productId, UUID warehouseId,
+            int quantity, String description) {
+        return withInventoryLock(productId, warehouseId,
+                () -> reverseReturnLocked(actor, productId, warehouseId,
+                        quantity, description));
+    }
+
+    private Inventory addStockLocked(
             User actor, UUID productId, UUID warehouseId,
             int quantity, String description) {
         requireDescription(description);
@@ -65,19 +124,19 @@ public class InventoryService {
 
         Inventory inventory = inventoryRepository
                 .findByProductAndWarehouse(productId, warehouseId)
+                .map(Inventory::copy)
                 .orElseGet(() -> new Inventory(
                         UUID.randomUUID(), productId, warehouseId, 0));
 
         inventory.addStock(quantity);
-        inventoryRepository.save(inventory);
 
-        recordMovement(inventory, InventoryMovementType.INCOME,
+        persistInventoryChange(inventory, InventoryMovementType.INCOME,
                 quantity, actor, description);
 
         return inventory;
     }
 
-    public Inventory reserveStock(
+    private Inventory reserveStockLocked(
             User actor, UUID productId, UUID warehouseId,
             int quantity, String description) {
         requireDescription(description);
@@ -97,17 +156,16 @@ public class InventoryService {
                     "No se puede reservar un producto que no está publicado.");
         }
 
-        Inventory inventory = findInventory(productId, warehouseId);
+        Inventory inventory = findInventory(productId, warehouseId).copy();
         inventory.reserve(quantity);
-        inventoryRepository.save(inventory);
 
-        recordMovement(inventory, InventoryMovementType.RESERVATION,
+        persistInventoryChange(inventory, InventoryMovementType.RESERVATION,
                 quantity, actor, description);
 
         return inventory;
     }
 
-    public Inventory releaseReservation(
+    private Inventory releaseReservationLocked(
             User actor, UUID productId, UUID warehouseId,
             int quantity, String description) {
         requireDescription(description);
@@ -121,18 +179,17 @@ public class InventoryService {
         authorizeOperation(actor, product, warehouse);
         requireActiveWarehouse(warehouse);
 
-        Inventory inventory = findInventory(productId, warehouseId);
+        Inventory inventory = findInventory(productId, warehouseId).copy();
         inventory.releaseReservation(quantity);
-        inventoryRepository.save(inventory);
 
-        recordMovement(inventory,
+        persistInventoryChange(inventory,
                 InventoryMovementType.RELEASE_RESERVATION,
                 quantity, actor, description);
 
         return inventory;
     }
 
-    public Inventory registerSale(
+    private Inventory registerSaleLocked(
             User actor, UUID productId, UUID warehouseId,
             int quantity, String description) {
         requireDescription(description);
@@ -146,17 +203,16 @@ public class InventoryService {
         authorizeOperation(actor, product, warehouse);
         requireActiveWarehouse(warehouse);
 
-        Inventory inventory = findInventory(productId, warehouseId);
+        Inventory inventory = findInventory(productId, warehouseId).copy();
         inventory.registerSale(quantity);
-        inventoryRepository.save(inventory);
 
-        recordMovement(inventory, InventoryMovementType.SALE,
+        persistInventoryChange(inventory, InventoryMovementType.SALE,
                 quantity, actor, description);
 
         return inventory;
     }
 
-    public Inventory adjustStock(
+    private Inventory adjustStockLocked(
             User actor, UUID productId, UUID warehouseId,
             int newQuantity, String description) {
         requireDescription(description);
@@ -174,23 +230,33 @@ public class InventoryService {
         requireActiveWarehouse(warehouse);
         requirePhysicalProduct(product);
 
-        Inventory inventory = findInventory(productId, warehouseId);
+        Inventory inventory = findInventory(productId, warehouseId).copy();
         int previousQuantity = inventory.getQuantity();
 
         inventory.adjustStock(newQuantity);
-        inventoryRepository.save(inventory);
 
-        int difference = Math.abs(newQuantity - previousQuantity);
+        long difference = Math.abs(
+                (long) newQuantity - previousQuantity
+        );
 
         if (difference > 0) {
-            recordMovement(inventory, InventoryMovementType.ADJUSTMENT,
-                    difference, actor, description);
+            if (difference > Integer.MAX_VALUE) {
+                throw new IllegalArgumentException(
+                        "La diferencia del ajuste supera el límite permitido."
+                );
+            }
+
+            persistInventoryChange(inventory,
+                    InventoryMovementType.ADJUSTMENT,
+                    (int) difference, actor, description);
+        } else {
+            inventoryRepository.save(inventory);
         }
 
         return inventory;
     }
 
-    public Inventory registerReturn(
+    private Inventory registerReturnLocked(
             User actor, UUID productId, UUID warehouseId,
             int quantity, String description) {
         requireDescription(description);
@@ -207,13 +273,35 @@ public class InventoryService {
 
         Inventory inventory = inventoryRepository
                 .findByProductAndWarehouse(productId, warehouseId)
+                .map(Inventory::copy)
                 .orElseGet(() -> new Inventory(
                         UUID.randomUUID(), productId, warehouseId, 0));
 
         inventory.registerReturn(quantity);
-        inventoryRepository.save(inventory);
 
-        recordMovement(inventory, InventoryMovementType.RETURN,
+        persistInventoryChange(inventory, InventoryMovementType.RETURN,
+                quantity, actor, description);
+
+        return inventory;
+    }
+
+    private Inventory reverseReturnLocked(
+            User actor, UUID productId, UUID warehouseId,
+            int quantity, String description) {
+        requireDescription(description);
+        requirePositive(quantity);
+
+        Product product = findProduct(productId);
+        Warehouse warehouse = findWarehouse(warehouseId);
+
+        authorizeOperation(actor, product, warehouse);
+        requireActiveWarehouse(warehouse);
+        requirePhysicalProduct(product);
+
+        Inventory inventory = findInventory(productId, warehouseId).copy();
+        inventory.reverseReturn(quantity);
+
+        persistInventoryChange(inventory, InventoryMovementType.ADJUSTMENT,
                 quantity, actor, description);
 
         return inventory;
@@ -271,13 +359,59 @@ public class InventoryService {
                 "No tienes permisos para operar este inventario.");
     }
 
-    private void recordMovement(
+
+    private static final ReentrantLock[] INVENTORY_LOCKS = createInventoryLocks();
+
+    private static ReentrantLock[] createInventoryLocks() {
+        ReentrantLock[] locks = new ReentrantLock[256];
+
+        for (int i = 0; i < locks.length; i++) {
+            locks[i] = new ReentrantLock();
+        }
+
+        return locks;
+    }
+
+    private Inventory withInventoryLock(
+            UUID productId, UUID warehouseId,
+            Supplier<Inventory> operation) {
+
+        int hash = productId == null ? 0 : productId.hashCode();
+        hash = 31 * hash + (warehouseId == null ? 0 : warehouseId.hashCode());
+
+        ReentrantLock lock = INVENTORY_LOCKS[
+                Math.floorMod(hash, INVENTORY_LOCKS.length)];
+
+        lock.lock();
+
+        try {
+            return operation.get();
+        } finally {
+            lock.unlock();
+        }
+    }
+
+    private void persistInventoryChange(
             Inventory inventory, InventoryMovementType type,
             int quantity, User actor, String description) {
 
-        movementRepository.save(new InventoryMovement(
+        InventoryMovement movement = new InventoryMovement(
                 UUID.randomUUID(), inventory.getId(), type,
-                quantity, actor.getId(), description));
+                quantity, actor.getId(), description);
+
+        movementRepository.save(movement);
+
+        try {
+            inventoryRepository.save(inventory);
+        } catch (RuntimeException inventorySaveError) {
+            try {
+                movementRepository.deleteById(movement.getId());
+            } catch (RuntimeException rollbackError) {
+                inventorySaveError.addSuppressed(rollbackError);
+            }
+
+            throw inventorySaveError;
+        }
     }
 
     private void requireDescription(String description) {

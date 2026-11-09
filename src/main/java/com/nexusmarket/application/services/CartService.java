@@ -95,6 +95,24 @@ public class CartService {
         return cart;
     }
 
+    public void validateProductsAvailable(User actor, UUID cartId) {
+        Cart cart = findCartOrThrow(cartId);
+        authorizeCartOwner(actor, cart);
+        ensureActiveCart(cart);
+
+        for (CartItem item : cart.getItems()) {
+            Product product = productRepository.findById(item.getProductId())
+                    .orElseThrow(() -> new IllegalArgumentException(
+                            "No existe el producto solicitado."));
+
+            if (!product.isAvailableForSale()) {
+                throw new IllegalStateException(
+                        "El producto ya no está publicado ni disponible "
+                                + "para la venta: " + product.getName());
+            }
+        }
+    }
+
     public List<CartItem> getItems(User actor, UUID cartId) {
         return getCart(actor, cartId).getItems();
     }
@@ -105,6 +123,14 @@ public class CartService {
         ensureActiveCart(cart);
 
         cart.convert();
+        return cart;
+    }
+
+    public Cart restoreConvertedCart(User actor, UUID cartId) {
+        Cart cart = findCartOrThrow(cartId);
+        authorizeCartOwner(actor, cart);
+
+        cart.restoreConversion();
         return cart;
     }
 

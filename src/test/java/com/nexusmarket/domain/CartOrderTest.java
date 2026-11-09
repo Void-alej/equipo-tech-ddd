@@ -45,6 +45,73 @@ class CartOrderTest {
     }
 
     @Test
+    void shouldExposeCartItemsThroughUnmodifiableList() {
+        Cart cart = new Cart(UUID.randomUUID(), UUID.randomUUID());
+
+        cart.addItem(
+                UUID.randomUUID(),
+                "Teclado",
+                new BigDecimal("100000"),
+                2
+        );
+
+        assertThrows(
+                UnsupportedOperationException.class,
+                () -> cart.getItems().clear()
+        );
+
+        assertEquals(1, cart.getItems().size());
+        assertEquals(2, cart.getItems().get(0).getQuantity());
+    }
+
+    @Test
+    void shouldRejectQuantityOverflowWithoutChangingCart() {
+        Cart cart = new Cart(UUID.randomUUID(), UUID.randomUUID());
+        UUID productId = UUID.randomUUID();
+
+        cart.addItem(
+                productId,
+                "Teclado",
+                new BigDecimal("100000"),
+                Integer.MAX_VALUE
+        );
+
+        assertThrows(
+                ArithmeticException.class,
+                () -> cart.addItem(
+                        productId,
+                        "Teclado",
+                        new BigDecimal("100000"),
+                        1
+                )
+        );
+
+        assertEquals(
+                Integer.MAX_VALUE,
+                cart.getItems().get(0).getQuantity()
+        );
+    }
+
+    @Test
+    void shouldPreserveQuantityWhenAddingItemsConcurrently() {
+        Cart cart = new Cart(UUID.randomUUID(), UUID.randomUUID());
+        UUID productId = UUID.randomUUID();
+
+        java.util.stream.IntStream.range(0, 100)
+                .parallel()
+                .forEach(i -> cart.addItem(
+                        productId,
+                        "Teclado",
+                        new BigDecimal("100000"),
+                        1
+                ));
+
+        assertEquals(1, cart.getItems().size());
+        assertEquals(100, cart.getItems().get(0).getQuantity());
+        assertEquals(new BigDecimal("10000000"), cart.getTotal());
+    }
+
+    @Test
     void shouldBlockChangesAfterCartConversion() {
         Cart cart = new Cart(UUID.randomUUID(), UUID.randomUUID());
         cart.addItem(UUID.randomUUID(), "Mouse",
@@ -91,6 +158,49 @@ class CartOrderTest {
         assertEquals(OrderStatus.FINALIZED, order.getStatus());
 
         assertThrows(IllegalStateException.class, order::cancel);
+    }
+
+    @Test
+    void shouldRestoreOrderStateWhenPersistenceFails() {
+        OrderItem item = new OrderItem(
+                UUID.randomUUID(), "Teclado",
+                new BigDecimal("100000"), 1);
+
+        Order order = new Order(
+                UUID.randomUUID(), UUID.randomUUID(), List.of(item));
+
+        assertThrows(IllegalStateException.class,
+                () -> order.transitionAndPersist(
+                        () -> order.registerPayment(true),
+                        () -> {
+                            throw new IllegalStateException(
+                                    "Fallo simulado de persistencia.");
+                        }));
+
+        assertEquals(OrderStatus.PENDING_PAYMENT, order.getStatus());
+        assertEquals(PaymentStatus.PENDING, order.getPaymentStatus());
+    }
+
+    @Test
+    void shouldKeepFinalizedOrderImmutableWhenTransitionIsAttempted() {
+        OrderItem item = new OrderItem(
+                UUID.randomUUID(), "Teclado",
+                new BigDecimal("100000"), 1);
+
+        Order order = new Order(
+                UUID.randomUUID(), UUID.randomUUID(), List.of(item));
+
+        order.registerPayment(true);
+        order.dispatch();
+        order.markDelivered();
+        order.finalizeOrder();
+
+        assertThrows(IllegalStateException.class,
+                () -> order.transitionAndPersist(
+                        order::cancel, () -> {}));
+
+        assertEquals(OrderStatus.FINALIZED, order.getStatus());
+        assertEquals(PaymentStatus.APPROVED, order.getPaymentStatus());
     }
 
     @Test
