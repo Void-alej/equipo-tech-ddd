@@ -3,7 +3,11 @@ package com.nexusmarket.domain;
 import com.nexusmarket.application.services.CartService;
 import com.nexusmarket.application.dto.SellerOrderView;
 import com.nexusmarket.application.services.OrderService;
+import com.nexusmarket.domain.enums.BuyerCommercialStatus;
 import com.nexusmarket.domain.enums.OrderStatus;
+import com.nexusmarket.domain.models.BuyerProfile;
+import com.nexusmarket.domain.ports.out.BuyerProfileRepository;
+import com.nexusmarket.infrastructure.repositories.InMemoryBuyerProfileRepository;
 import com.nexusmarket.domain.enums.PaymentStatus;
 import com.nexusmarket.domain.enums.ProductType;
 import com.nexusmarket.domain.enums.UserRole;
@@ -33,6 +37,7 @@ class OrderServiceTest {
 
     private UserRepository userRepository;
     private ProductRepository productRepository;
+    private BuyerProfileRepository buyerProfileRepository;
     private OrderRepository orderRepository;
     private CartService cartService;
     private OrderService orderService;
@@ -48,8 +53,10 @@ class OrderServiceTest {
         userRepository = new InMemoryUserRepository();
         productRepository = new InMemoryProductRepository();
         orderRepository = new InMemoryOrderRepository();
+        buyerProfileRepository = new InMemoryBuyerProfileRepository();
 
-        cartService = new CartService(userRepository, productRepository);
+        cartService = new CartService(
+                userRepository, productRepository, buyerProfileRepository);
         orderService = new OrderService(
                 cartService, orderRepository, userRepository);
 
@@ -66,6 +73,13 @@ class OrderServiceTest {
         userRepository.save(otherBuyer);
         userRepository.save(seller);
         userRepository.save(logistics);
+
+        buyerProfileRepository.save(new BuyerProfile(
+                buyer.getId(), "Dirección principal", List.of(),
+                BuyerCommercialStatus.ACTIVE));
+        buyerProfileRepository.save(new BuyerProfile(
+                otherBuyer.getId(), "Dirección principal", List.of(),
+                BuyerCommercialStatus.ACTIVE));
 
         product = new Product(
                 UUID.randomUUID(),
@@ -315,6 +329,26 @@ class OrderServiceTest {
                 UnauthorizedUserOperationException.class,
                 () -> sellerQueryService.getMySellerOrders(buyer)
         );
+    }
+
+    @Test
+    void shouldRejectOrderWhenBuyerBecomesCommerciallyInactive() {
+        Cart cart = createCartWithProduct();
+
+        buyerProfileRepository.findByBuyerId(buyer.getId())
+                .orElseThrow()
+                .changeCommercialStatus(BuyerCommercialStatus.INACTIVE);
+
+        assertThrows(
+                UnauthorizedUserOperationException.class,
+                () -> orderService.createOrderFromCart(buyer, cart.getId())
+        );
+
+        assertEquals(
+                com.nexusmarket.domain.enums.CartStatus.ACTIVE,
+                cart.getStatus()
+        );
+        assertTrue(orderRepository.findAll().isEmpty());
     }
 
     private Cart createCartWithProduct() {

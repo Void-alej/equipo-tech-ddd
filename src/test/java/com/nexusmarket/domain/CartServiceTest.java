@@ -1,7 +1,11 @@
 package com.nexusmarket.domain;
 
 import com.nexusmarket.application.services.CartService;
+import com.nexusmarket.domain.enums.BuyerCommercialStatus;
 import com.nexusmarket.domain.enums.ProductType;
+import com.nexusmarket.domain.models.BuyerProfile;
+import com.nexusmarket.domain.ports.out.BuyerProfileRepository;
+import com.nexusmarket.infrastructure.repositories.InMemoryBuyerProfileRepository;
 import com.nexusmarket.domain.enums.UserRole;
 import com.nexusmarket.domain.exceptions.UnauthorizedUserOperationException;
 import com.nexusmarket.domain.models.Cart;
@@ -25,6 +29,7 @@ class CartServiceTest {
 
     private UserRepository userRepository;
     private ProductRepository productRepository;
+    private BuyerProfileRepository buyerProfileRepository;
     private CartService cartService;
 
     private User buyer;
@@ -36,8 +41,10 @@ class CartServiceTest {
     void setUp() {
         userRepository = new InMemoryUserRepository();
         productRepository = new InMemoryProductRepository();
+        buyerProfileRepository = new InMemoryBuyerProfileRepository();
 
-        cartService = new CartService(userRepository, productRepository);
+        cartService = new CartService(
+                userRepository, productRepository, buyerProfileRepository);
 
         buyer = createUser("Comprador", "buyer@example.com",
                 "CC30001", UserRole.BUYER);
@@ -49,6 +56,13 @@ class CartServiceTest {
         userRepository.save(buyer);
         userRepository.save(otherBuyer);
         userRepository.save(seller);
+
+        buyerProfileRepository.save(new BuyerProfile(
+                buyer.getId(), "Dirección principal", java.util.List.of(),
+                BuyerCommercialStatus.ACTIVE));
+        buyerProfileRepository.save(new BuyerProfile(
+                otherBuyer.getId(), "Dirección principal", java.util.List.of(),
+                BuyerCommercialStatus.ACTIVE));
 
         product = new Product(
                 UUID.randomUUID(),
@@ -136,6 +150,32 @@ class CartServiceTest {
         );
 
         assertTrue(cart.getItems().isEmpty());
+    }
+
+    @Test
+    void shouldRejectInactiveBuyerWhenCreatingCart() {
+        buyerProfileRepository.findByBuyerId(buyer.getId())
+                .orElseThrow()
+                .changeCommercialStatus(BuyerCommercialStatus.INACTIVE);
+
+        assertThrows(
+                UnauthorizedUserOperationException.class,
+                () -> cartService.createCart(buyer)
+        );
+    }
+
+    @Test
+    void shouldRejectInactiveBuyerWhenAccessingExistingCart() {
+        Cart cart = cartService.createCart(buyer);
+
+        buyerProfileRepository.findByBuyerId(buyer.getId())
+                .orElseThrow()
+                .changeCommercialStatus(BuyerCommercialStatus.INACTIVE);
+
+        assertThrows(
+                UnauthorizedUserOperationException.class,
+                () -> cartService.getCart(buyer, cart.getId())
+        );
     }
 
     private User createUser(
