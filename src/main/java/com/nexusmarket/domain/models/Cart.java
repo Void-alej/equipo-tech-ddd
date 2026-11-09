@@ -4,7 +4,6 @@ import com.nexusmarket.domain.enums.CartStatus;
 
 import java.math.BigDecimal;
 import java.util.ArrayList;
-import java.util.Collections;
 import java.util.List;
 import java.util.UUID;
 
@@ -27,13 +26,18 @@ public class Cart {
         this.status = CartStatus.ACTIVE;
     }
 
-    public void addItem(
+    public synchronized void addItem(
             UUID productId,
             String productName,
             BigDecimal unitPrice,
             int quantity) {
 
         ensureActive();
+
+        if (quantity <= 0) {
+            throw new IllegalArgumentException(
+                    "La cantidad debe ser mayor que cero.");
+        }
 
         CartItem existingItem = items.stream()
                 .filter(item -> item.getProductId().equals(productId))
@@ -46,14 +50,24 @@ public class Cart {
                 throw new IllegalArgumentException(
                         "Los datos del producto no coinciden con los del carrito.");
             }
-            existingItem.increaseQuantity(quantity);
+            int updatedQuantity = Math.addExact(
+                    existingItem.getQuantity(), quantity);
+
+            int existingIndex = items.indexOf(existingItem);
+
+            items.set(existingIndex, new CartItem(
+                    productId,
+                    productName,
+                    unitPrice,
+                    updatedQuantity
+            ));
             return;
         }
 
         items.add(new CartItem(productId, productName, unitPrice, quantity));
     }
 
-    public void removeItem(UUID productId) {
+    public synchronized void removeItem(UUID productId) {
         ensureActive();
 
         boolean removed = items.removeIf(
@@ -65,13 +79,13 @@ public class Cart {
         }
     }
 
-    public BigDecimal getTotal() {
+    public synchronized BigDecimal getTotal() {
         return items.stream()
                 .map(CartItem::getSubtotal)
                 .reduce(BigDecimal.ZERO, BigDecimal::add);
     }
 
-    public void convert() {
+    public synchronized void convert() {
         ensureActive();
 
         if (items.isEmpty()) {
@@ -82,7 +96,16 @@ public class Cart {
         status = CartStatus.CONVERTED;
     }
 
-    public void cancel() {
+    public synchronized void restoreConversion() {
+        if (status != CartStatus.CONVERTED) {
+            throw new IllegalStateException(
+                    "Solo se puede restaurar un carrito convertido.");
+        }
+
+        status = CartStatus.ACTIVE;
+    }
+
+    public synchronized void cancel() {
         ensureActive();
         status = CartStatus.CANCELLED;
     }
@@ -102,11 +125,11 @@ public class Cart {
         return buyerId;
     }
 
-    public List<CartItem> getItems() {
-        return Collections.unmodifiableList(items);
+    public synchronized List<CartItem> getItems() {
+        return List.copyOf(items);
     }
 
-    public CartStatus getStatus() {
+    public synchronized CartStatus getStatus() {
         return status;
     }
 }

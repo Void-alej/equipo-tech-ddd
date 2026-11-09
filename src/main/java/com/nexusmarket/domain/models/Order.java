@@ -1,3 +1,4 @@
+
 package com.nexusmarket.domain.models;
 
 import com.nexusmarket.domain.enums.OrderStatus;
@@ -62,6 +63,7 @@ public class Order {
             status = OrderStatus.PAID;
         } else {
             paymentStatus = PaymentStatus.REJECTED;
+            status = OrderStatus.CANCELLED;
         }
     }
 
@@ -114,6 +116,28 @@ public class Order {
         }
 
         status = OrderStatus.CANCELLED;
+    }
+
+    public void transitionAndPersist(
+            Runnable transition,
+            Runnable persistence) {
+
+        if (transition == null || persistence == null) {
+            throw new IllegalArgumentException(
+                    "La transición y la persistencia son obligatorias.");
+        }
+
+        OrderStatus previousStatus = status;
+        PaymentStatus previousPaymentStatus = paymentStatus;
+
+        try {
+            transition.run();
+            persistence.run();
+        } catch (RuntimeException exception) {
+            status = previousStatus;
+            paymentStatus = previousPaymentStatus;
+            throw exception;
+        }
     }
 
     private void ensureNotFinalized() {
