@@ -46,7 +46,7 @@ public class UserService {
 
     /**
      * Consulta todos los usuarios.
-     * Administración y supervisión tienen permisos de lectura.
+     * Solo el administrador tiene permisos de lectura.
      */
     public List<User> getAllUsers(User actor) {
         requireReadPermission(actor);
@@ -178,8 +178,7 @@ public class UserService {
     private User requireReadPermission(User actor) {
         User registered = findActiveRegisteredUser(actor);
 
-        if (registered.getRole() != UserRole.ADMINISTRATOR
-                && registered.getRole() != UserRole.SUPERVISOR) {
+        if (registered.getRole() != UserRole.ADMINISTRATOR) {
             throw new UnauthorizedUserOperationException(
                     "No tienes permisos para consultar la información de usuarios.");
         }
