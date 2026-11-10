@@ -89,6 +89,18 @@ public class Order {
         status = OrderStatus.DELIVERED;
     }
 
+    public void markDigitalDelivered() {
+        ensureNotFinalized();
+
+        if (status != OrderStatus.PAID
+                || paymentStatus != PaymentStatus.APPROVED) {
+            throw new IllegalStateException(
+                    "Solo se puede entregar digitalmente un pedido pagado.");
+        }
+
+        status = OrderStatus.DELIVERED;
+    }
+
     public void finalizeOrder() {
         ensureNotFinalized();
 
