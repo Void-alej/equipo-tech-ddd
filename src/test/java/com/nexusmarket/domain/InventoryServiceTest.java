@@ -49,6 +49,7 @@ class InventoryServiceTest {
     private User administrator;
     private User seller;
     private User otherSeller;
+    private User buyer;
     private Product product;
     private Warehouse marketplaceWarehouse;
     private Warehouse otherSellerWarehouse;
@@ -90,9 +91,17 @@ class InventoryServiceTest {
                 UserRole.SELLER
         );
 
+        buyer = createUser(
+                "Comprador",
+                "buyer@example.com",
+                "CC30003",
+                UserRole.BUYER
+        );
+
         userRepository.save(administrator);
         userRepository.save(seller);
         userRepository.save(otherSeller);
+        userRepository.save(buyer);
 
         product = new Product(
                 UUID.randomUUID(),
@@ -209,6 +218,23 @@ class InventoryServiceTest {
                         otherSellerWarehouse.getId(),
                         5,
                         "Intento de modificar inventario ajeno"
+                )
+        );
+
+        assertTrue(inventoryRepository.findAll().isEmpty());
+        assertTrue(movementRepository.findAll().isEmpty());
+    }
+
+    @Test
+    void shouldNotAllowBuyerToModifyInventory() {
+        assertThrows(
+                UnauthorizedUserOperationException.class,
+                () -> inventoryService.addStock(
+                        buyer,
+                        product.getId(),
+                        marketplaceWarehouse.getId(),
+                        5,
+                        "Intento de modificar inventario"
                 )
         );
 
