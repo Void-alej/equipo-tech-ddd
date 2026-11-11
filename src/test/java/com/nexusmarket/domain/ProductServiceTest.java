@@ -39,13 +39,7 @@ class ProductServiceTest {
 
     @Test
     void shouldCreateProductInitiallySuspended() {
-        Product product = productService.createProduct(
-                seller,
-                "Teclado",
-                "Teclado mecánico",
-                ProductType.PHYSICAL,
-                new BigDecimal("120000")
-        );
+        Product product = createSampleProduct();
 
         assertEquals(ProductStatus.SUSPENDED, product.getStatus());
         assertEquals(seller.getId(), product.getSellerId());
@@ -88,14 +82,7 @@ class ProductServiceTest {
     @Test
     void shouldNotAllowSellerToModifyAnotherSellersProduct() {
         Product product = createSampleProduct();
-
-        User otherSeller = new User(
-                UUID.randomUUID(),
-                "Otro vendedor",
-                new Email("other@example.com"),
-                new DocumentId("NIT54321"),
-                UserRole.SELLER
-        );
+        User otherSeller = createOtherSeller();
 
         assertThrows(
                 UnauthorizedUserOperationException.class,
@@ -128,6 +115,158 @@ class ProductServiceTest {
         );
     }
 
+    @Test
+    void shouldAddVariantToProduct() {
+        Product product = createSampleProduct();
+
+        Product updatedProduct = productService.addVariant(
+                seller,
+                product.getId(),
+                "Color rojo"
+        );
+
+        assertEquals(1, updatedProduct.getVariants().size());
+        assertEquals(
+                "Color rojo",
+                updatedProduct.getVariants().get(0).getDescription()
+        );
+        assertEquals(
+                1,
+                repository.findById(product.getId()).orElseThrow()
+                        .getVariants().size()
+        );
+    }
+
+    @Test
+    void shouldRemoveVariantFromProduct() {
+        Product product = createSampleProduct();
+
+        productService.addVariant(seller, product.getId(), "Talla M");
+
+        UUID variantId = product.getVariants().get(0).getId();
+
+        Product updatedProduct = productService.removeVariant(
+                seller,
+                product.getId(),
+                variantId
+        );
+
+        assertTrue(updatedProduct.getVariants().isEmpty());
+    }
+
+    @Test
+    void shouldRejectEmptyVariantDescription() {
+        Product product = createSampleProduct();
+
+        assertThrows(
+                IllegalArgumentException.class,
+                () -> productService.addVariant(
+                        seller,
+                        product.getId(),
+                        "   "
+                )
+        );
+    }
+
+    @Test
+    void shouldNotAllowAnotherSellerToAddVariant() {
+        Product product = createSampleProduct();
+        User otherSeller = createOtherSeller();
+
+        assertThrows(
+                UnauthorizedUserOperationException.class,
+                () -> productService.addVariant(
+                        otherSeller,
+                        product.getId(),
+                        "Color azul"
+                )
+        );
+    }
+
+    @Test
+    void shouldNotAllowAnotherSellerToRemoveVariant() {
+        Product product = createSampleProduct();
+
+        productService.addVariant(seller, product.getId(), "Color negro");
+
+        UUID variantId = product.getVariants().get(0).getId();
+        User otherSeller = createOtherSeller();
+
+        assertThrows(
+                UnauthorizedUserOperationException.class,
+                () -> productService.removeVariant(
+                        otherSeller,
+                        product.getId(),
+                        variantId
+                )
+        );
+    }
+
+    @Test
+    void shouldRejectRemovingNonexistentVariant() {
+        Product product = createSampleProduct();
+
+        assertThrows(
+                IllegalArgumentException.class,
+                () -> productService.removeVariant(
+                        seller,
+                        product.getId(),
+                        UUID.randomUUID()
+                )
+        );
+    }
+
+    @Test
+    void shouldReturnOnlyProductsOwnedByActiveSeller() {
+        Product ownProduct = createSampleProduct();
+
+        User otherSeller = createOtherSeller();
+        productService.createProduct(
+                otherSeller,
+                "Mouse",
+                "Mouse inalámbrico",
+                ProductType.PHYSICAL,
+                new BigDecimal("50000")
+        );
+
+        var products = productService.getMyProducts(seller);
+
+        assertEquals(1, products.size());
+        assertEquals(ownProduct.getId(), products.get(0).getId());
+        assertEquals(seller.getId(), products.get(0).getSellerId());
+    }
+
+    @Test
+    void shouldReturnEmptyListWhenSellerHasNoProducts() {
+        assertTrue(productService.getMyProducts(seller).isEmpty());
+    }
+
+    @Test
+    void shouldNotAllowBuyerToConsultOwnProducts() {
+        User buyer = new User(
+                UUID.randomUUID(),
+                "Comprador",
+                new Email("buyer@example.com"),
+                new DocumentId("CC12345"),
+                UserRole.BUYER
+        );
+
+        assertThrows(
+                UnauthorizedUserOperationException.class,
+                () -> productService.getMyProducts(buyer)
+        );
+    }
+
+    @Test
+    void shouldNotAllowInactiveSellerToConsultOwnProducts() {
+        seller.suspend();
+
+        assertThrows(
+                UnauthorizedUserOperationException.class,
+                () -> productService.getMyProducts(seller)
+        );
+    }
+
     private Product createSampleProduct() {
         return productService.createProduct(
                 seller,
@@ -135,6 +274,16 @@ class ProductServiceTest {
                 "Teclado mecánico",
                 ProductType.PHYSICAL,
                 new BigDecimal("120000")
+        );
+    }
+
+    private User createOtherSeller() {
+        return new User(
+                UUID.randomUUID(),
+                "Otro vendedor",
+                new Email("other@example.com"),
+                new DocumentId("NIT54321"),
+                UserRole.SELLER
         );
     }
 }

@@ -4,6 +4,9 @@ import com.nexusmarket.domain.enums.ProductStatus;
 import com.nexusmarket.domain.enums.ProductType;
 
 import java.math.BigDecimal;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.List;
 import java.util.Objects;
 import java.util.UUID;
 
@@ -15,6 +18,7 @@ public class Product {
     private final String description;
     private final ProductType type;
     private final BigDecimal price;
+    private final List<ProductVariant> variants;
     private ProductStatus status;
 
     public Product(
@@ -26,7 +30,9 @@ public class Product {
             BigDecimal price
     ) {
         if (id == null) {
-            throw new IllegalArgumentException("El identificador del producto es obligatorio.");
+            throw new IllegalArgumentException(
+                    "El identificador del producto es obligatorio."
+            );
         }
         if (sellerId == null) {
             throw new IllegalArgumentException("El vendedor es obligatorio.");
@@ -50,6 +56,7 @@ public class Product {
         this.description = description.trim();
         this.type = type;
         this.price = price;
+        this.variants = new ArrayList<>();
         this.status = ProductStatus.SUSPENDED;
     }
 
@@ -79,6 +86,39 @@ public class Product {
 
     public ProductStatus getStatus() {
         return status;
+    }
+
+    public List<ProductVariant> getVariants() {
+        return Collections.unmodifiableList(variants);
+    }
+
+    public void addVariant(ProductVariant variant) {
+        if (variant == null) {
+            throw new IllegalArgumentException("La variante es obligatoria.");
+        }
+        if (variants.contains(variant)) {
+            throw new IllegalArgumentException("La variante ya está registrada.");
+        }
+
+        variants.add(variant);
+    }
+
+    public void removeVariant(UUID variantId) {
+        if (variantId == null) {
+            throw new IllegalArgumentException(
+                    "El identificador de la variante es obligatorio."
+            );
+        }
+
+        boolean removed = variants.removeIf(
+                variant -> variant.getId().equals(variantId)
+        );
+
+        if (!removed) {
+            throw new IllegalArgumentException(
+                    "No existe la variante solicitada."
+            );
+        }
     }
 
     public void publish() {

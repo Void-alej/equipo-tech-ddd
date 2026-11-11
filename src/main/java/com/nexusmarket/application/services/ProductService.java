@@ -4,6 +4,7 @@ import com.nexusmarket.domain.enums.ProductType;
 import com.nexusmarket.domain.enums.UserRole;
 import com.nexusmarket.domain.exceptions.UnauthorizedUserOperationException;
 import com.nexusmarket.domain.models.Product;
+import com.nexusmarket.domain.models.ProductVariant;
 import com.nexusmarket.domain.models.User;
 import com.nexusmarket.domain.ports.out.ProductRepository;
 
@@ -17,7 +18,9 @@ public class ProductService {
 
     public ProductService(ProductRepository productRepository) {
         if (productRepository == null) {
-            throw new IllegalArgumentException("El repositorio de productos es obligatorio.");
+            throw new IllegalArgumentException(
+                    "El repositorio de productos es obligatorio."
+            );
         }
         this.productRepository = productRepository;
     }
@@ -76,6 +79,50 @@ public class ProductService {
         return product;
     }
 
+    public Product addVariant(
+            User actor,
+            UUID productId,
+            String description
+    ) {
+        Product product = findProductOrThrow(productId);
+        authorizeSeller(actor, product);
+
+        ProductVariant variant = new ProductVariant(
+                UUID.randomUUID(),
+                description
+        );
+
+        product.addVariant(variant);
+        productRepository.save(product);
+
+        return product;
+    }
+
+    public Product removeVariant(
+            User actor,
+            UUID productId,
+            UUID variantId
+    ) {
+        Product product = findProductOrThrow(productId);
+        authorizeSeller(actor, product);
+
+        product.removeVariant(variantId);
+        productRepository.save(product);
+
+        return product;
+    }
+
+    public List<Product> getMyProducts(User actor) {
+        if (actor == null || !actor.isActive()
+                || actor.getRole() != UserRole.SELLER) {
+            throw new UnauthorizedUserOperationException(
+                    "Solo un vendedor activo puede consultar sus productos."
+            );
+        }
+
+        return productRepository.findBySellerId(actor.getId());
+    }
+
     public List<Product> getPublishedProducts() {
         return productRepository.findAll().stream()
                 .filter(Product::isAvailableForSale)
@@ -84,7 +131,9 @@ public class ProductService {
 
     private Product findProductOrThrow(UUID productId) {
         if (productId == null) {
-            throw new IllegalArgumentException("El identificador del producto es obligatorio.");
+            throw new IllegalArgumentException(
+                    "El identificador del producto es obligatorio."
+            );
         }
 
         return productRepository.findById(productId)

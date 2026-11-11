@@ -58,7 +58,10 @@ class OrderServiceTest {
         cartService = new CartService(
                 userRepository, productRepository, buyerProfileRepository);
         orderService = new OrderService(
-                cartService, orderRepository, userRepository);
+                cartService,
+                orderRepository,
+                userRepository,
+                productRepository);
 
         buyer = createUser("Comprador", "buyer@example.com",
                 "CC41001", UserRole.BUYER);
@@ -349,6 +352,66 @@ class OrderServiceTest {
                 cart.getStatus()
         );
         assertTrue(orderRepository.findAll().isEmpty());
+    }
+
+    @Test
+    void shouldAutomaticallyDeliverAndFinalizeDigitalOnlyOrder() {
+        Product digitalProduct = createDigitalProduct();
+        Cart cart = cartService.createCart(buyer);
+        cartService.addProduct(
+                buyer, cart.getId(), digitalProduct.getId(), 1);
+
+        Order order = orderService.createOrderFromCart(buyer, cart.getId());
+
+        orderService.registerPayment(buyer, order.getId(), true);
+
+        assertEquals(OrderStatus.FINALIZED, order.getStatus());
+        assertEquals(PaymentStatus.APPROVED, order.getPaymentStatus());
+    }
+
+    @Test
+    void shouldKeepMixedOrderPaidAfterPaymentApproval() {
+        Product digitalProduct = createDigitalProduct();
+        Cart cart = createCartWithProduct();
+        cartService.addProduct(
+                buyer, cart.getId(), digitalProduct.getId(), 1);
+
+        Order order = orderService.createOrderFromCart(buyer, cart.getId());
+
+        orderService.registerPayment(buyer, order.getId(), true);
+
+        assertEquals(OrderStatus.PAID, order.getStatus());
+        assertEquals(PaymentStatus.APPROVED, order.getPaymentStatus());
+    }
+
+    @Test
+    void shouldNotDeliverDigitalOrderWhenPaymentIsRejected() {
+        Product digitalProduct = createDigitalProduct();
+        Cart cart = cartService.createCart(buyer);
+        cartService.addProduct(
+                buyer, cart.getId(), digitalProduct.getId(), 1);
+
+        Order order = orderService.createOrderFromCart(buyer, cart.getId());
+
+        orderService.registerPayment(buyer, order.getId(), false);
+
+        assertEquals(OrderStatus.CANCELLED, order.getStatus());
+        assertEquals(PaymentStatus.REJECTED, order.getPaymentStatus());
+    }
+
+    private Product createDigitalProduct() {
+        Product digitalProduct = new Product(
+                UUID.randomUUID(),
+                seller.getId(),
+                "Libro digital",
+                "Libro electrónico de prueba",
+                ProductType.DIGITAL,
+                new BigDecimal("25000")
+        );
+
+        digitalProduct.publish();
+        productRepository.save(digitalProduct);
+        return digitalProduct;
     }
 
     private Cart createCartWithProduct() {

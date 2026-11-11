@@ -413,6 +413,21 @@ public class OrderService {
         }
     }
 
+    private boolean containsOnlyDigitalProducts(Order order) {
+        if (productRepository == null) {
+            return false;
+        }
+
+        return order.getItems().stream().allMatch(item -> {
+            var product = productRepository.findById(item.getProductId())
+                    .orElseThrow(() -> new IllegalStateException(
+                            "No se encontró el producto del pedido: "
+                                    + item.getProductId()));
+
+            return product.getType() == ProductType.DIGITAL;
+        });
+    }
+
     public Order registerPayment(User actor, UUID orderId, boolean approved) {
         Order order = findOrderOrThrow(orderId);
         requireOrderBuyer(actor, order);
@@ -431,6 +446,9 @@ public class OrderService {
             throw new IllegalStateException(
                     "El pedido no está pendiente de pago.");
         }
+
+        boolean onlyDigitalOrder =
+                approved && containsOnlyDigitalProducts(order);
 
         List<Reservation> orderReservations =
                 new ArrayList<>(reservations.getOrDefault(orderId, List.of()));
@@ -480,7 +498,14 @@ public class OrderService {
         // Registrar y guardar el cambio de estado.
         try {
             order.transitionAndPersist(
-                    () -> order.registerPayment(approved),
+                    () -> {
+                        order.registerPayment(approved);
+
+                        if (onlyDigitalOrder) {
+                            order.markDigitalDelivered();
+                            order.finalizeOrder();
+                        }
+                    },
                     () -> orderRepository.save(order));
 
         } catch (RuntimeException orderError) {
