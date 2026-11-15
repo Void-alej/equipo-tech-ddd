@@ -230,7 +230,7 @@ function output(value){$("#apiOutput").textContent=typeof value==="string"?value
 function formData(form){return Object.fromEntries(new FormData(form).entries())}
 async function api(path,method="GET",body=null){
  const headers={};if(state.token)headers.Authorization="Bearer "+state.token;if(body!==null)headers["Content-Type"]="application/json";
- const response=await fetch("/api"+path,{method,headers,body:body===null?undefined:JSON.stringify(body)});
+ const url=path.startsWith("/api/")?path:"/api"+path;const response=await fetch(url,{method,headers,body:body===null?undefined:JSON.stringify(body)});
  const text=await response.text();let data=null;try{data=text?JSON.parse(text):null}catch{data=text}
  if(!response.ok){const message=data&&data.error?data.error:(response.status+" "+response.statusText);throw new Error(message)}
  output({method,path,status:response.status,data});
@@ -311,7 +311,6 @@ $("#productsList").addEventListener("click",async e=>{const btn=e.target.closest
 $("#createCartBtn").addEventListener("click",async()=>{try{const cart=await runAction("/carts","POST",{});state.cartId=cart.id;sessionStorage.setItem("nexusCartId",cart.id);$("#cartId").value=cart.id;await loadCart()}catch{}});
 $("#cartItemForm").addEventListener("submit",async e=>{e.preventDefault();try{const data=formData(e.currentTarget);const id=$("#cartId").value||state.cartId;if(!id)throw new Error("Primero crea un carrito.");state.cartId=id;await runAction("/carts/"+id+"/items","POST",{productId:data.productId,quantity:Number(data.quantity)});await loadCart()}catch(err){showGlobalError(err.message)}});
 $("#createOrderBtn").addEventListener("click",async()=>{const id=$("#cartId").value||state.cartId;if(!id){showGlobalError("Crea un carrito primero.");return}try{const order=await runAction("/orders","POST",{cartId:id});showMessage($("#globalMessage"),"Pedido creado: "+order.id+". Usa ese UUID en el formulario de pago.","success")}catch{}});
-bindForm("payForm",null);
 $("#payForm").addEventListener("submit",async e=>{e.preventDefault();const x=formData(e.currentTarget);try{await runAction("/orders/"+x.orderId+"/pay","POST",{approved:x.approved==="true"})}catch{}});
 $("#invoiceForm").addEventListener("submit",async e=>{e.preventDefault();const x=formData(e.currentTarget);try{await runAction("/orders/"+x.orderId+"/invoice","POST",{})}catch{}});
 $("#createShipmentsForm").addEventListener("submit",async e=>{e.preventDefault();const x=formData(e.currentTarget);try{await runAction("/orders/"+x.orderId+"/shipments","POST",{})}catch{}});
