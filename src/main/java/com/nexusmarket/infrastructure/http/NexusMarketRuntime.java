@@ -26,47 +26,31 @@ import java.util.UUID;
 /** Composition root del servidor ejecutable de NexusMarket. */
 public final class NexusMarketRuntime {
 
-    public final UserRepository users = new InMemoryUserRepository();
-    public final ProductRepository products = new InMemoryProductRepository();
-    public final WarehouseRepository warehouses = new InMemoryWarehouseRepository();
-    public final InventoryRepository inventories = new InMemoryInventoryRepository();
-    public final InventoryMovementRepository movements =
-            new InMemoryInventoryMovementRepository();
-    public final BuyerProfileRepository buyerProfiles =
-            new InMemoryBuyerProfileRepository();
-    public final OrderRepository orders = new InMemoryOrderRepository();
-    public final OrderAllocationRepository allocations =
-            new InMemoryOrderAllocationRepository();
-    public final ShipmentRepository shipments = new InMemoryShipmentRepository();
-    public final ReturnRepository returns = new InMemoryReturnRepository();
-    public final InvoiceRepository invoices = new InMemoryInvoiceRepository();
+    public final UserRepository users;
+    public final ProductRepository products;
+    public final WarehouseRepository warehouses;
+    public final InventoryRepository inventories;
+    public final InventoryMovementRepository movements;
+    public final BuyerProfileRepository buyerProfiles;
+    public final OrderRepository orders;
+    public final OrderAllocationRepository allocations;
+    public final ShipmentRepository shipments;
+    public final ReturnRepository returns;
+    public final InvoiceRepository invoices;
 
-    public final UserService userService = new UserService(users);
-    public final BuyerService buyerService = new BuyerService(users, buyerProfiles);
-    public final WarehouseService warehouseService =
-            new WarehouseService(warehouses, users);
-    public final ProductService productService = new ProductService(products);
-    public final InventoryService inventoryService = new InventoryService(
-            inventories, movements, products, warehouses, users);
-    public final CartService cartService =
-            new CartService(users, products, buyerProfiles);
-    public final ShipmentService shipmentService = new ShipmentService(
-            shipments, allocations, orders, products, warehouses, users);
-    public final OrderService orderService = new OrderService(
-            cartService, orders, users, inventoryService, inventories,
-            warehouses, products, requireLogisticsOperator(),
-            allocations, shipments);
-    public final ReturnService returnService = new ReturnService(
-            returns, orders, users, products, warehouses, inventoryService);
-    public final InvoiceService invoiceService =
-            new InvoiceService(invoices, orders, users);
-    public final AdministrativeReportService administrativeReportService =
-            new AdministrativeReportService(users, products, warehouses,
-                    inventories, movements, orders, invoices, shipments, returns);
-    public final SellerOnboardingService sellerOnboardingService =
-            new SellerOnboardingService(userService, warehouseService);
-    public final AuthenticationService authenticationService =
-            new AuthenticationService(users);
+    public final UserService userService;
+    public final BuyerService buyerService;
+    public final WarehouseService warehouseService;
+    public final ProductService productService;
+    public final InventoryService inventoryService;
+    public final CartService cartService;
+    public final ShipmentService shipmentService;
+    public final OrderService orderService;
+    public final ReturnService returnService;
+    public final InvoiceService invoiceService;
+    public final AdministrativeReportService administrativeReportService;
+    public final SellerOnboardingService sellerOnboardingService;
+    public final AuthenticationService authenticationService;
 
     private final User logisticsOperator;
 
@@ -76,16 +60,46 @@ public final class NexusMarketRuntime {
         System.setProperty("nexusmarket.data.dir",
                 Path.of(directory).toAbsolutePath().toString());
 
-        // Nota: los repositorios anteriores se inicializan antes del constructor.
-        // Se crea una aplicación nueva para que todos lean la ruta configurada.
-        throw new IllegalStateException("Use NexusMarketRuntime.create() to initialize storage.");
+        // Las instancias persistentes se construyen solo después de configurar
+        // la ruta de almacenamiento.
+        users = new InMemoryUserRepository();
+        products = new InMemoryProductRepository();
+        warehouses = new InMemoryWarehouseRepository();
+        inventories = new InMemoryInventoryRepository();
+        movements = new InMemoryInventoryMovementRepository();
+        buyerProfiles = new InMemoryBuyerProfileRepository();
+        orders = new InMemoryOrderRepository();
+        allocations = new InMemoryOrderAllocationRepository();
+        shipments = new InMemoryShipmentRepository();
+        returns = new InMemoryReturnRepository();
+        invoices = new InMemoryInvoiceRepository();
+
+        logisticsOperator = findOrCreateLogisticsOperator();
+
+        userService = new UserService(users);
+        buyerService = new BuyerService(users, buyerProfiles);
+        warehouseService = new WarehouseService(warehouses, users);
+        productService = new ProductService(products);
+        inventoryService = new InventoryService(
+                inventories, movements, products, warehouses, users);
+        cartService = new CartService(users, products, buyerProfiles);
+        shipmentService = new ShipmentService(
+                shipments, allocations, orders, products, warehouses, users);
+        orderService = new OrderService(
+                cartService, orders, users, inventoryService, inventories,
+                warehouses, products, logisticsOperator, allocations, shipments);
+        returnService = new ReturnService(
+                returns, orders, users, products, warehouses, inventoryService);
+        invoiceService = new InvoiceService(invoices, orders, users);
+        administrativeReportService = new AdministrativeReportService(
+                users, products, warehouses, inventories, movements,
+                orders, invoices, shipments, returns);
+        sellerOnboardingService = new SellerOnboardingService(
+                userService, warehouseService);
+        authenticationService = new AuthenticationService(users);
     }
 
-    private NexusMarketRuntime(boolean initialized) {
-        logisticsOperator = requireLogisticsOperator();
-    }
-
-    private User requireLogisticsOperator() {
+    private User findOrCreateLogisticsOperator() {
         return users.findAll().stream()
                 .filter(user -> user.getRole() == UserRole.LOGISTICS_OPERATOR
                         && user.isActive())
@@ -100,16 +114,6 @@ public final class NexusMarketRuntime {
                     users.save(operator);
                     return operator;
                 });
-    }
-
-    public static NexusMarketRuntime create() {
-        // Configurar la ruta antes de inicializar los repositorios.
-        String directory = System.getenv().getOrDefault(
-                "NEXUSMARKET_DATA_DIR", "data/nexusmarket");
-        System.setProperty("nexusmarket.data.dir",
-                Path.of(directory).toAbsolutePath().toString());
-
-        return new NexusMarketRuntime(true);
     }
 
     public void initializeDemoAccounts() {
@@ -143,6 +147,7 @@ public final class NexusMarketRuntime {
     }
 
     public User getLogisticsOperator() {
-        return users.findById(logisticsOperator.getId()).orElse(logisticsOperator);
+        return users.findById(logisticsOperator.getId())
+                .orElse(logisticsOperator);
     }
 }
