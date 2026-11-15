@@ -55,10 +55,17 @@ public final class NexusMarketRuntime {
     private final User logisticsOperator;
 
     public NexusMarketRuntime() {
-        String directory = System.getenv().getOrDefault(
-                "NEXUSMARKET_DATA_DIR", "data/nexusmarket");
+        this(Path.of(System.getenv().getOrDefault(
+                "NEXUSMARKET_DATA_DIR", "data/nexusmarket")));
+    }
+
+    public NexusMarketRuntime(Path dataDirectory) {
+        if (dataDirectory == null) {
+            throw new IllegalArgumentException(
+                    "El directorio de datos es obligatorio.");
+        }
         System.setProperty("nexusmarket.data.dir",
-                Path.of(directory).toAbsolutePath().toString());
+                dataDirectory.toAbsolutePath().toString());
 
         // Las instancias persistentes se construyen solo después de configurar
         // la ruta de almacenamiento.
