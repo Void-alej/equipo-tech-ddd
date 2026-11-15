@@ -1,86 +1,89 @@
-
 # NexusMarket
 
-Sistema de gestión de un marketplace que centraliza las operaciones comerciales entre compradores, vendedores y operadores logísticos. Desarrollado en Java 17 con Maven, aplicando Domain-Driven Design (DDD) y principios de Arquitectura Hexagonal.
+Marketplace desarrollado en Java 17 y Maven. La aplicación permite gestionar compradores, vendedores, catálogo de productos físicos y digitales, inventario, carritos, pedidos, pagos de demostración, envíos, devoluciones y reportes.
 
-## Descripción
+## Requisitos
 
-NexusMarket permite gestionar el ciclo comercial de un marketplace, desde la administración de usuarios y el catálogo de productos hasta las compras, los pedidos, la logística, la facturación y los procesos de posventa.
+- JDK 17.
+- Maven 3.9 o superior.
 
-El sistema contempla productos físicos y digitales, inventario distribuido en bodegas y diferentes roles con responsabilidades específicas.
+## Ejecutar la aplicación
 
-## Módulos funcionales
-
-El proyecto contempla los siguientes módulos:
-
-- **Administración de usuarios:** gestión de usuarios, roles y estados.
-- **Gestión de vendedores:** incorporación y administración de vendedores.
-- **Gestión de compradores:** administración de información comercial y direcciones.
-- **Gestión de bodegas:** administración de espacios de almacenamiento.
-- **Catálogo de productos:** registro, publicación, suspensión y descontinuación de productos, incluyendo variantes.
-- **Inventario distribuido:** control de existencias y movimientos asociados a productos y bodegas.
-- **Carrito de compras:** selección y administración de productos antes de confirmar una compra.
-- **Gestión de pedidos:** administración del ciclo de vida de los pedidos y sus estados.
-- **Facturación:** gestión de la información comercial de las compras.
-- **Logística:** administración de envíos y procesos de despacho.
-- **Devoluciones y reembolsos:** gestión de procesos de posventa.
-- **Reportes administrativos:** consolidación y consulta de información operativa.
-
-## Roles del sistema
-
-NexusMarket contempla cinco roles:
-
-- **Comprador:** consulta productos y realiza compras.
-- **Vendedor:** registra y administra sus productos.
-- **Operador logístico:** participa en la administración del inventario y los despachos.
-- **Administrador:** incorpora vendedores y administra bodegas.
-- **Supervisor:** consulta y realiza seguimiento operativo.
-
-Cada usuario tiene un único rol y sus operaciones deben respetar las responsabilidades asignadas.
-
-## Reglas de negocio principales
-
-- El correo electrónico y el documento de identidad deben ser únicos.
-- Cada usuario tiene un único rol.
-- Los vendedores no pueden registrarse por sí mismos; deben ser incorporados por un administrador.
-- El inventario debe estar asociado a un producto y una bodega.
-- No se permiten existencias negativas.
-- No se puede reservar inventario inexistente o marcado como dañado.
-- Los productos físicos requieren inventario y despacho.
-- Los productos digitales se entregan automáticamente después de aprobarse el pago.
-- Un pedido finalizado no puede modificarse.
-
-## Tecnologías
-
-- Java 17
-- Maven
-- JUnit 5
-- Domain-Driven Design (DDD)
-- Arquitectura Hexagonal
-
-## Estructura del proyecto
-
-El código fuente está organizado en paquetes Java:
-
-- `src/main/java/com/nexusmarket`: código principal de NexusMarket.
-- `src/test/java/com/nexusmarket`: pruebas unitarias y de integración de NexusMarket.
-
-## Ejecución
-
-Para compilar el proyecto:
+Desde la raíz del repositorio:
 
 ```bash
-mvn clean compile
+mvn clean test
+mvn exec:java -Dexec.mainClass=com.nexusmarket.infrastructure.http.NexusMarketServer
 ```
 
-Para ejecutar las pruebas:
+Abre [http://localhost:8080](http://localhost:8080).
+
+El servidor utiliza el puerto `8080` por defecto. Puedes cambiarlo mediante la variable de entorno `PORT`.
+
+### Cuenta administrativa inicial
+
+En una instalación nueva se crea esta cuenta:
+
+- Correo: `admin@nexusmarket.local`
+- Contraseña inicial: `Admin123!`
+
+También se crea una cuenta de operador logístico:
+
+- Correo: `logistica@nexusmarket.local`
+- Contraseña inicial: `Logistica123!`
+
+Antes de una demostración compartida, configura contraseñas propias mediante las variables `NEXUSMARKET_ADMIN_PASSWORD` y `NEXUSMARKET_LOGISTICS_PASSWORD`. Esas variables se aplican al crear por primera vez las credenciales; no reemplazan contraseñas ya almacenadas.
+
+## Persistencia
+
+Los repositorios utilizan almacenamiento local serializado para conservar usuarios, perfiles, productos, bodegas, inventario, movimientos, carritos, pedidos, reservas, asignaciones, envíos, devoluciones, facturas y credenciales entre reinicios.
+
+Por defecto, los archivos se guardan en `data/nexusmarket/`. Esta ruta se excluye de Git. Puedes cambiarla con `NEXUSMARKET_DATA_DIR`.
+
+Las sesiones activas son temporales: al reiniciar el servidor se debe iniciar sesión nuevamente. Las credenciales se almacenan como hashes PBKDF2-HMAC-SHA256 con sal aleatoria; no se guarda la contraseña en texto plano.
+
+## Interfaz y API
+
+La interfaz web llama a la API REST del mismo servidor. Después de las operaciones principales vuelve a consultar los recursos mediante GET para mostrar el estado actualizado.
+
+Endpoints principales:
+
+- `POST /api/auth/login` y `POST /api/auth/logout`.
+- `GET /api/me`, `GET /api/users`.
+- `GET /api/products`, `POST /api/products`, `POST /api/products/{id}/publish`.
+- `GET /api/warehouses`, `GET /api/inventory`, `POST /api/inventory`.
+- `POST /api/buyers`, `POST /api/sellers`, `POST /api/logistics-operators`.
+- `POST /api/carts`, `POST /api/carts/{id}/items`, `GET /api/carts/{id}`.
+- `POST /api/orders`, `GET /api/orders`, `POST /api/orders/{id}/pay`.
+- `POST /api/orders/{id}/shipments`, `POST /api/shipments/{id}/{transition}`.
+- `POST /api/orders/{id}/returns`, `POST /api/returns/{id}/{transition}`.
+- `GET /api/reports/seller`, `GET /api/reports/admin`.
+
+Las operaciones protegidas requieren el encabezado `Authorization: Bearer <token>` que entrega el inicio de sesión. El servidor resuelve el usuario registrado para cada solicitud y aplica controles por rol.
+
+## Flujos de demostración
+
+1. Inicia sesión como administrador y crea tres compradores con perfil y credenciales.
+2. Incorpora un vendedor y su primera bodega.
+3. Inicia sesión como vendedor, crea y publica productos físicos y digitales.
+4. Inicia sesión como operador logístico e ingresa existencias físicas en la bodega Marketplace.
+5. Inicia sesión con cada comprador, crea un carrito, agrega productos y confirma el pedido. La API rechaza cantidades físicas superiores a las existencias reservables.
+6. Aprueba el pago como comprador, crea los envíos como operador logístico y ejecuta las transiciones de despacho hasta la entrega.
+7. Solicita la devolución de un artículo, apruébala como administrador, registra la recepción física como operador logístico y confirma el reembolso como administrador.
+8. Consulta el reporte del vendedor y el administrativo.
+9. Reinicia el servidor, inicia sesión nuevamente y consulta los mismos GET para verificar la persistencia.
+
+## Alcances de la demostración
+
+- El pago se simula con un resultado aprobado o rechazado. No hay conexión a una pasarela real.
+- El reembolso se registra mediante una referencia externa. No se transfiere dinero desde la aplicación.
+- La persistencia es local basada en archivos serializados; no es una base de datos relacional ni debe exponerse directamente a Internet sin endurecimiento adicional.
+- Los datos persistentes deben conservarse entre reinicios del proceso mientras se mantenga la carpeta configurada.
+
+## Pruebas
 
 ```bash
 mvn clean test
 ```
 
-## Alcance
-
-NexusMarket implementa los procesos funcionales definidos en la especificación del negocio.
-
-Las interfaces gráficas, aplicaciones móviles, portales web, mecanismos de autenticación técnica y detalles específicos de infraestructura o almacenamiento están fuera del alcance de dicha especificación.
+El workflow de GitHub Actions ejecuta la misma suite en cada push a esta rama y en los pull requests dirigidos a `main`.
