@@ -318,6 +318,10 @@ public final class NexusMarketHttpServer {
                 .orElseThrow(() -> new IllegalArgumentException("No existe el producto."));
         if (product.getType() == ProductType.PHYSICAL) {
             int available = runtime.inventories.findByProductId(productId).stream()
+                    .filter(inventory -> runtime.warehouses.findById(inventory.getWarehouseId())
+                            .map(warehouse -> warehouse.isActive()
+                                    && warehouse.getType() == WarehouseType.MARKETPLACE)
+                            .orElse(false))
                     .mapToInt(Inventory::getAvailableQuantity).sum();
             int alreadyInCart = runtime.cartService.getItems(actor, cartId).stream()
                     .filter(item -> item.getProductId().equals(productId))
