@@ -12,10 +12,11 @@ import java.util.concurrent.ConcurrentMap;
 public class InMemoryInventoryRepository implements InventoryRepository {
 
     private final ConcurrentMap<UUID, Inventory> inventories =
-            new ConcurrentHashMap<>();
+            PersistentConcurrentMap.create("inventories");
 
     private final ConcurrentMap<String, UUID> inventoryKeys =
-            new ConcurrentHashMap<>();
+            PersistentConcurrentMap.create("inventory-keys");
+
 
     @Override
     public synchronized Inventory save(Inventory inventory) {
