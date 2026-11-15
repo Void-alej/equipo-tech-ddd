@@ -3,7 +3,7 @@ package com.nexusmarket.domain.models;
 import java.math.BigDecimal;
 import java.util.UUID;
 
-public class CartItem {
+public class CartItem implements java.io.Serializable {
 
     private final UUID productId;
     private final String productName;
