@@ -14,7 +14,7 @@ import java.util.concurrent.ConcurrentMap;
 
 public class InMemoryUserRepository implements UserRepository {
 
-    private final ConcurrentMap<UUID, User> users = new ConcurrentHashMap<>();
+    private final ConcurrentMap<UUID, User> users = PersistentConcurrentMap.create("users");
 
     @Override
     public void save(User user) {
