@@ -417,7 +417,7 @@ public final class NexusMarketHttpServer {
         }
         if (actor.getRole() == UserRole.SELLER) {
             return runtime.orderService.getMySellerOrders(actor).stream()
-                    .filter(view -> view.getOrderId().equals(orderId))
+                    .filter(view -> view.orderId().equals(orderId))
                     .findFirst()
                     .orElseThrow(() -> new UnauthorizedUserOperationException(
                             "El pedido no contiene productos de este vendedor."));
