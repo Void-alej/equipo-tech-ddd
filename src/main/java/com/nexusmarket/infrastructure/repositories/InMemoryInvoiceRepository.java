@@ -12,8 +12,10 @@ import java.util.Map;
 
 public class InMemoryInvoiceRepository implements InvoiceRepository {
 
-    private final Map<UUID, Invoice> invoicesById = new ConcurrentHashMap<>();
-    private final Map<UUID, UUID> invoiceIdByOrderId = new ConcurrentHashMap<>();
+    private final Map<UUID, Invoice> invoicesById =
+            PersistentConcurrentMap.create("invoices");
+    private final Map<UUID, UUID> invoiceIdByOrderId =
+            PersistentConcurrentMap.create("invoice-index");
 
     @Override
     public synchronized void save(Invoice invoice) {
