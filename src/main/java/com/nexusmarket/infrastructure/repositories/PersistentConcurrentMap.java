@@ -20,7 +20,7 @@ import java.util.concurrent.ConcurrentMap;
  * configurada la propiedad {@code nexusmarket.data.dir}. El servidor la
  * configura al iniciar para conservar el estado entre reinicios.</p>
  */
-public final class PersistentConcurrentMap<K extends Serializable, V extends Serializable>
+public final class PersistentConcurrentMap<K, V>
         extends ConcurrentHashMap<K, V> {
 
     private static final long serialVersionUID = 1L;
@@ -32,7 +32,7 @@ public final class PersistentConcurrentMap<K extends Serializable, V extends Ser
     }
 
     @SuppressWarnings("unchecked")
-    public static <K extends Serializable, V extends Serializable>
+    public static <K, V>
             ConcurrentMap<K, V> create(String name) {
         String directory = System.getProperty("nexusmarket.data.dir");
         if (directory == null || directory.isBlank()) {
