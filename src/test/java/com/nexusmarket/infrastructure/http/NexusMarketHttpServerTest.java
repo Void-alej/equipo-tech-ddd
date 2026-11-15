@@ -346,6 +346,90 @@ class NexusMarketHttpServerTest {
 
             assertEquals(3, report.path("availableInventory").asInt());
 
+            JsonNode reportBeforeRestart = report.deepCopy();
+
+            // Simular el reinicio completo del proceso y la reconstrucción
+            // de todos los repositorios desde el directorio persistente.
+            server.stop(0);
+            runtime = new NexusMarketRuntime(temporaryDirectory);
+            runtime.initializeDemoAccounts();
+            server = new NexusMarketHttpServer(runtime, 0);
+            server.start();
+            baseUrl = "http://localhost:" + server.getPort();
+
+            HttpResponse<String> expiredSession = request(
+                    baseUrl, "GET", "/api/reports/seller", sellerToken, null);
+            assertEquals(403, expiredSession.statusCode());
+
+            HttpResponse<String> loginAdminAfterRestart = request(
+                    baseUrl, "POST", "/api/auth/login", null,
+                    """
+                    {"email":"admin@nexusmarket.local","password":"Admin123!"}
+                    """);
+            assertEquals(200, loginAdminAfterRestart.statusCode());
+            adminToken = json.readTree(loginAdminAfterRestart.body())
+                    .path("token").asText();
+
+            HttpResponse<String> loginBuyerAfterRestart = request(
+                    baseUrl, "POST", "/api/auth/login", null,
+                    """
+                    {"email":"buyer.api@example.com","password":"Buyer123!"}
+                    """);
+            assertEquals(200, loginBuyerAfterRestart.statusCode());
+            buyerToken = json.readTree(loginBuyerAfterRestart.body())
+                    .path("token").asText();
+
+            HttpResponse<String> loginLogisticsAfterRestart = request(
+                    baseUrl, "POST", "/api/auth/login", null,
+                    """
+                    {"email":"logistica@nexusmarket.local","password":"Logistica123!"}
+                    """);
+            assertEquals(200, loginLogisticsAfterRestart.statusCode());
+            logisticsToken = json.readTree(loginLogisticsAfterRestart.body())
+                    .path("token").asText();
+
+            HttpResponse<String> loginSellerAfterRestart = request(
+                    baseUrl, "POST", "/api/auth/login", null,
+                    """
+                    {"email":"seller.api@example.com","password":"Seller123!"}
+                    """);
+            assertEquals(200, loginSellerAfterRestart.statusCode());
+            sellerToken = json.readTree(loginSellerAfterRestart.body())
+                    .path("token").asText();
+
+            HttpResponse<String> sellerReportAfterRestart = request(
+                    baseUrl, "GET", "/api/reports/seller", sellerToken, null);
+            assertEquals(200, sellerReportAfterRestart.statusCode(),
+                    sellerReportAfterRestart.body());
+            JsonNode reportAfterRestart =
+                    json.readTree(sellerReportAfterRestart.body());
+
+            for (String field : new String[] {
+                    "seller", "products", "inventory", "availableInventory",
+                    "movements", "orders", "returns", "salesByProduct"
+            }) {
+                assertEquals(reportBeforeRestart.path(field),
+                        reportAfterRestart.path(field),
+                        "El reporte cambió después del reinicio en: " + field);
+            }
+
+            HttpResponse<String> persistedOrder = request(
+                    baseUrl, "GET", "/api/orders/" + orderId, buyerToken, null);
+            assertEquals(200, persistedOrder.statusCode());
+            assertEquals("DELIVERED",
+                    json.readTree(persistedOrder.body()).path("status").asText());
+
+            HttpResponse<String> persistedReturn = request(
+                    baseUrl, "GET", "/api/returns/" + returnId, adminToken, null);
+            assertEquals(200, persistedReturn.statusCode());
+            assertEquals("REFUNDED",
+                    json.readTree(persistedReturn.body()).path("status").asText());
+
+            HttpResponse<String> persistedShipments = request(
+                    baseUrl, "GET", "/api/shipments", logisticsToken, null);
+            assertEquals(200, persistedShipments.statusCode());
+            assertTrue(persistedShipments.body().contains(shipmentId));
+
             HttpResponse<String> orderAfterRefund = request(
                     baseUrl, "GET", "/api/orders/" + orderId, buyerToken, null);
             assertEquals(200, orderAfterRefund.statusCode());
