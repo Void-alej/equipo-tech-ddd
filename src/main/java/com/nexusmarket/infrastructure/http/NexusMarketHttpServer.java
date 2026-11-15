@@ -156,6 +156,12 @@ public final class NexusMarketHttpServer {
             if (p.length == 1 && "returns".equals(p[0])) {
                 return returnsFor(actor);
             }
+            if (p.length == 1 && "invoices".equals(p[0])) {
+                return runtime.invoiceService.getMyInvoices(actor);
+            }
+            if (p.length == 2 && "invoices".equals(p[0])) {
+                return runtime.invoiceService.getMyInvoice(actor, uuid(p[1]));
+            }
             if (p.length == 2 && "carts".equals(p[0])) {
                 return runtime.cartService.getCart(actor, uuid(p[1]));
             }
