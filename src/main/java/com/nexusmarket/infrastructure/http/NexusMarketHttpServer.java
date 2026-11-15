@@ -161,6 +161,11 @@ public final class NexusMarketHttpServer {
                     && "shipments".equals(p[2])) {
                 return runtime.shipmentService.getOrderShipments(actor, uuid(p[1]));
             }
+            if (p.length == 3 && "buyers".equals(p[0])
+                    && "profile".equals(p[2])) {
+                return runtime.buyerService.getProfileByAdministrator(
+                        actor, uuid(p[1]));
+            }
             if (p.length == 2 && "returns".equals(p[0])) {
                 return runtime.returnService.getReturn(actor, uuid(p[1]));
             }
