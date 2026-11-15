@@ -12,7 +12,7 @@ import java.util.concurrent.ConcurrentMap;
 
 public class InMemoryProductRepository implements ProductRepository {
 
-    private final ConcurrentMap<UUID, Product> products = new ConcurrentHashMap<>();
+    private final ConcurrentMap<UUID, Product> products = PersistentConcurrentMap.create("products");
 
     @Override
     public void save(Product product) {
