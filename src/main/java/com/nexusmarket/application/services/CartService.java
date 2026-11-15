@@ -12,6 +12,7 @@ import com.nexusmarket.domain.models.User;
 import com.nexusmarket.domain.ports.out.ProductRepository;
 import com.nexusmarket.domain.ports.out.BuyerProfileRepository;
 import com.nexusmarket.domain.ports.out.UserRepository;
+import com.nexusmarket.infrastructure.repositories.PersistentConcurrentMap;
 
 import java.util.List;
 import java.util.Map;
@@ -23,7 +24,7 @@ public class CartService {
     private final UserRepository userRepository;
     private final ProductRepository productRepository;
     private final BuyerProfileRepository buyerProfileRepository;
-    private final Map<UUID, Cart> carts = new ConcurrentHashMap<>();
+    private final Map<UUID, Cart> carts = PersistentConcurrentMap.create("carts");
 
     public CartService(
             UserRepository userRepository,
