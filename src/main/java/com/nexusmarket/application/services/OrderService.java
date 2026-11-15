@@ -414,19 +414,22 @@ public class OrderService {
         }
     }
 
-    private boolean containsOnlyDigitalProducts(Order order) {
+    private List<UUID> findDigitalProductIds(Order order) {
         if (productRepository == null) {
-            return false;
+            return List.of();
         }
 
-        return order.getItems().stream().allMatch(item -> {
-            var product = productRepository.findById(item.getProductId())
-                    .orElseThrow(() -> new IllegalStateException(
-                            "No se encontró el producto del pedido: "
-                                    + item.getProductId()));
-
-            return product.getType() == ProductType.DIGITAL;
-        });
+        return order.getItems().stream()
+                .filter(item -> {
+                    Product product = productRepository.findById(item.getProductId())
+                            .orElseThrow(() -> new IllegalStateException(
+                                    "No se encontró el producto del pedido: "
+                                            + item.getProductId()));
+                    return product.getType() == ProductType.DIGITAL;
+                })
+                .map(OrderItem::getProductId)
+                .distinct()
+                .toList();
     }
 
     public Order registerPayment(User actor, UUID orderId, boolean approved) {
@@ -448,8 +451,11 @@ public class OrderService {
                     "El pedido no está pendiente de pago.");
         }
 
-        boolean onlyDigitalOrder =
-                approved && containsOnlyDigitalProducts(order);
+        List<UUID> digitalProductIdsToDeliver =
+                approved ? findDigitalProductIds(order) : List.of();
+        boolean onlyDigitalOrder = approved
+                && !order.getItems().isEmpty()
+                && digitalProductIdsToDeliver.size() == order.getItems().size();
 
         List<Reservation> orderReservations =
                 new ArrayList<>(reservations.getOrDefault(orderId, List.of()));
@@ -501,6 +507,9 @@ public class OrderService {
             order.transitionAndPersist(
                     () -> {
                         order.registerPayment(approved);
+
+                        digitalProductIdsToDeliver.forEach(
+                                order::markDigitalItemDelivered);
 
                         if (onlyDigitalOrder) {
                             order.markDigitalDelivered();
