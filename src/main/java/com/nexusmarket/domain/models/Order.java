@@ -11,7 +11,7 @@ import java.util.Collections;
 import java.util.List;
 import java.util.UUID;
 
-public class Order {
+public class Order implements java.io.Serializable {
 
     private final UUID id;
     private final UUID buyerId;
