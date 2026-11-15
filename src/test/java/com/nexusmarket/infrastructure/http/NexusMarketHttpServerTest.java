@@ -111,6 +111,15 @@ class NexusMarketHttpServerTest {
                     2,
                     "Stock inicial de prueba HTTP");
 
+            Product digital = runtime.productService.createProduct(
+                    seller,
+                    "Manual digital",
+                    "Producto digital para probar pedidos mixtos",
+                    ProductType.DIGITAL,
+                    new BigDecimal("15000"));
+            runtime.productService.publishProduct(seller, digital.getId());
+            runtime.authenticationService.setPassword(seller, "Seller123!");
+
             HttpResponse<String> loginBuyer = request(
                     baseUrl, "POST", "/api/auth/login", null,
                     """
@@ -146,6 +155,13 @@ class NexusMarketHttpServerTest {
                     "{\"productId\":\"" + physical.getId()
                             + "\",\"quantity\":2}");
             assertEquals(200, validAdd.statusCode(), validAdd.body());
+
+            HttpResponse<String> digitalAdd = request(
+                    baseUrl, "POST", "/api/carts/" + cartId + "/items",
+                    buyerToken,
+                    "{\"productId\":\"" + digital.getId()
+                            + "\",\"quantity\":1}");
+            assertEquals(200, digitalAdd.statusCode(), digitalAdd.body());
 
             HttpResponse<String> orderCreated = request(
                     baseUrl, "POST", "/api/orders", buyerToken,
