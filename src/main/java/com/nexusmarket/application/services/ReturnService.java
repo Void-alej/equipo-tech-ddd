@@ -321,7 +321,8 @@ public class ReturnService {
         }
 
         if (actor.getRole() == UserRole.ADMINISTRATOR
-                || actor.getRole() == UserRole.SUPERVISOR) {
+                || actor.getRole() == UserRole.SUPERVISOR
+                || actor.getRole() == UserRole.LOGISTICS_OPERATOR) {
             return request;
         }
 
