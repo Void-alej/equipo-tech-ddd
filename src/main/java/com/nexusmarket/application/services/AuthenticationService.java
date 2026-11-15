@@ -44,7 +44,9 @@ public final class AuthenticationService {
         if (user == null) {
             throw new IllegalArgumentException("El usuario es obligatorio.");
         }
-        credentials.computeIfAbsent(user.getId(), ignored -> createCredential(password));
+        if (!credentials.containsKey(user.getId())) {
+            credentials.put(user.getId(), createCredential(password));
+        }
     }
 
     public void setPassword(User user, String password) {
