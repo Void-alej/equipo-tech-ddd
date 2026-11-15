@@ -52,6 +52,26 @@ public class BuyerService {
         return profile;
     }
 
+    public BuyerProfile getProfileByAdministrator(
+            User actor, UUID buyerId) {
+        requireAdministrator(actor);
+
+        if (buyerId == null) {
+            throw new IllegalArgumentException(
+                    "El identificador del comprador es obligatorio.");
+        }
+
+        User buyer = userRepository.findById(buyerId)
+                .orElseThrow(() -> new IllegalArgumentException(
+                        "No existe el comprador indicado."));
+        if (buyer.getRole() != UserRole.BUYER) {
+            throw new IllegalArgumentException(
+                    "El usuario indicado no tiene el rol de comprador.");
+        }
+
+        return findProfileOrThrow(buyerId);
+    }
+
     public BuyerProfile getMyProfile(User actor) {
         User buyer = requireBuyer(actor);
         return findProfileOrThrow(buyer.getId());
