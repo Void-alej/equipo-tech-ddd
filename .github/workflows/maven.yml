@@ -21,5 +21,13 @@ jobs:
           distribution: temurin
           java-version: '17'
           cache: maven
-      - name: Run tests
+      - name: Run Maven tests
         run: mvn -B clean test
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Validate browser JavaScript syntax
+        run: |
+          awk '/<script>/{flag=1;next}/<\\/script>/{flag=0}flag' src/main/resources/static/index.html > /tmp/nexusmarket-ui.js
+          node --check /tmp/nexusmarket-ui.js
