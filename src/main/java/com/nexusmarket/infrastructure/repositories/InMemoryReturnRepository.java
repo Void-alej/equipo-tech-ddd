@@ -13,7 +13,7 @@ import java.util.concurrent.ConcurrentMap;
 public class InMemoryReturnRepository implements ReturnRepository {
 
     private final ConcurrentMap<UUID, ReturnRequest> requests =
-            new ConcurrentHashMap<>();
+            PersistentConcurrentMap.create("returns");
 
     @Override
     public ReturnRequest save(ReturnRequest request) {
