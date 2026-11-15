@@ -2,6 +2,10 @@ package com.nexusmarket.infrastructure.repositories;
 
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
+import com.nexusmarket.domain.enums.UserRole;
+import com.nexusmarket.domain.models.User;
+import com.nexusmarket.domain.valueobjects.DocumentId;
+import com.nexusmarket.domain.valueobjects.Email;
 
 import java.nio.file.Path;
 import java.util.concurrent.ConcurrentMap;
@@ -51,6 +55,37 @@ class PersistentConcurrentMapTest {
                     PersistentConcurrentMap.create("sample");
 
             assertTrue(restored.isEmpty());
+        } finally {
+            restoreProperty(previousDirectory);
+        }
+    }
+
+    @Test
+    void shouldPersistNexusMarketEntitiesAndTheirValueObjects() {
+        String previousDirectory = System.getProperty("nexusmarket.data.dir");
+        try {
+            System.setProperty("nexusmarket.data.dir", temporaryDirectory.toString());
+
+            User user = new User(
+                    java.util.UUID.randomUUID(),
+                    "Comprador persistente",
+                    new Email("persistent@example.com"),
+                    new DocumentId("CC908766"),
+                    UserRole.BUYER);
+
+            ConcurrentMap<String, User> first =
+                    PersistentConcurrentMap.create("users");
+            first.put(user.getId().toString(), user);
+
+            ConcurrentMap<String, User> restored =
+                    PersistentConcurrentMap.create("users");
+
+            User recovered = restored.get(user.getId().toString());
+            assertNotNull(recovered);
+            assertEquals("Comprador persistente", recovered.getFullName());
+            assertEquals("persistent@example.com", recovered.getEmail().getValue());
+            assertEquals("CC908766", recovered.getDocumentId().getValue());
+            assertEquals(UserRole.BUYER, recovered.getRole());
         } finally {
             restoreProperty(previousDirectory);
         }
