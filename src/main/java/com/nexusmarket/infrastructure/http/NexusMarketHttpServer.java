@@ -253,12 +253,6 @@ public final class NexusMarketHttpServer {
 
         if (p.length == 3 && "carts".equals(p[0])
                 && "items".equals(p[2])) {
-            throw new IllegalArgumentException(
-                    "Usa POST /api/carts/{cartId}/items con el producto en el cuerpo.");
-        }
-
-        if (p.length == 3 && "carts".equals(p[0])
-                && "items".equals(p[2])) {
             return addCartItem(actor, uuid(p[1]), body);
         }
 
