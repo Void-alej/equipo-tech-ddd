@@ -452,22 +452,42 @@ public final class NexusMarketHttpServer {
                     .flatMap(order -> order.getItems().stream())
                     .filter(item -> item.getProductId().equals(product.getId()))
                     .mapToInt(OrderItem::getQuantity).sum();
-            int returned = sellerReturns.stream()
-                    .filter(request -> request.getProductId().equals(product.getId())
-                            && request.getStatus() != ReturnStatus.REJECTED)
+
+            List<ReturnRequest> productReturns = sellerReturns.stream()
+                    .filter(request -> request.getProductId().equals(product.getId()))
+                    .toList();
+
+            int unitsInReturnProcess = productReturns.stream()
+                    .filter(request -> request.getStatus() == ReturnStatus.REQUESTED
+                            || request.getStatus() == ReturnStatus.APPROVED
+                            || request.getStatus() == ReturnStatus.REFUND_PENDING)
                     .mapToInt(ReturnRequest::getQuantity).sum();
+
+            int unitsRefunded = productReturns.stream()
+                    .filter(request -> request.getStatus() == ReturnStatus.REFUNDED)
+                    .mapToInt(ReturnRequest::getQuantity).sum();
+
             BigDecimal gross = sellerOrders.stream()
                     .filter(order -> order.getPaymentStatus() == PaymentStatus.APPROVED)
                     .flatMap(order -> order.getItems().stream())
                     .filter(item -> item.getProductId().equals(product.getId()))
                     .map(OrderItem::getSubtotal)
                     .reduce(BigDecimal.ZERO, BigDecimal::add);
+
+            BigDecimal refundedAmount = productReturns.stream()
+                    .filter(request -> request.getStatus() == ReturnStatus.REFUNDED)
+                    .map(ReturnRequest::getRefundAmount)
+                    .reduce(BigDecimal.ZERO, BigDecimal::add);
+
             return Map.<String, Object>of(
                     "productId", product.getId(),
                     "productName", product.getName(),
                     "unitsSold", sold,
-                    "unitsInReturnProcess", returned,
-                    "grossSales", gross);
+                    "unitsInReturnProcess", unitsInReturnProcess,
+                    "unitsRefunded", unitsRefunded,
+                    "grossSales", gross,
+                    "refundedAmount", refundedAmount,
+                    "netSalesAfterRefunds", gross.subtract(refundedAmount));
         }).toList();
 
         return Map.of(
