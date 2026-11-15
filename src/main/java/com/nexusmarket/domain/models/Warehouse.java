@@ -4,7 +4,7 @@ import com.nexusmarket.domain.enums.WarehouseType;
 
 import java.util.UUID;
 
-public class Warehouse {
+public class Warehouse implements java.io.Serializable {
 
     private final UUID id;
     private final String name;
