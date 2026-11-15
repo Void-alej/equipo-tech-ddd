@@ -452,19 +452,27 @@ public final class NexusMarketHttpServer {
 
     private Object sellerReport(User actor) {
         requireRole(actor, UserRole.SELLER);
-        List<Product> sellerProducts = runtime.products.findBySellerId(actor.getId());
+        List<Product> sellerProducts = runtime.products.findBySellerId(actor.getId()).stream()
+                .sorted(Comparator.comparing(product -> product.getId().toString()))
+                .toList();
         Set<UUID> productIds = sellerProducts.stream()
                 .map(Product::getId).collect(Collectors.toSet());
         List<Inventory> sellerInventory = runtime.inventories.findAll().stream()
-                .filter(item -> productIds.contains(item.getProductId())).toList();
+                .filter(item -> productIds.contains(item.getProductId()))
+                .sorted(Comparator.comparing((Inventory item) -> item.getProductId().toString())
+                        .thenComparing(item -> item.getWarehouseId().toString()))
+                .toList();
         Set<UUID> inventoryIds = sellerInventory.stream()
                 .map(Inventory::getId).collect(Collectors.toSet());
         List<Order> sellerOrders = runtime.orders.findAll().stream()
                 .filter(order -> order.getItems().stream()
                         .anyMatch(item -> productIds.contains(item.getProductId())))
+                .sorted(Comparator.comparing(order -> order.getId().toString()))
                 .toList();
         List<ReturnRequest> sellerReturns = runtime.returns.findAll().stream()
-                .filter(request -> productIds.contains(request.getProductId())).toList();
+                .filter(request -> productIds.contains(request.getProductId()))
+                .sorted(Comparator.comparing(request -> request.getId().toString()))
+                .toList();
 
         List<Map<String, Object>> sales = sellerProducts.stream().map(product -> {
             int sold = sellerOrders.stream()
@@ -518,7 +526,9 @@ public final class NexusMarketHttpServer {
                 "availableInventory", sellerInventory.stream()
                         .mapToInt(Inventory::getAvailableQuantity).sum(),
                 "movements", runtime.movements.findAll().stream()
-                        .filter(movement -> inventoryIds.contains(movement.getInventoryId())).toList(),
+                        .filter(movement -> inventoryIds.contains(movement.getInventoryId()))
+                        .sorted(Comparator.comparing(movement -> movement.getId().toString()))
+                        .toList(),
                 "orders", sellerOrders,
                 "returns", sellerReturns,
                 "salesByProduct", sales
