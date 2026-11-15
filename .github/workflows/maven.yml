@@ -29,5 +29,5 @@ jobs:
           node-version: '22'
       - name: Validate browser JavaScript syntax
         run: |
-          awk '/<script>/{flag=1;next}/<\\/script>/{flag=0}flag' src/main/resources/static/index.html > /tmp/nexusmarket-ui.js
+          awk '/<script>/{flag=1;next}index($0,"</script>"){flag=0}flag' src/main/resources/static/index.html > /tmp/nexusmarket-ui.js
           node --check /tmp/nexusmarket-ui.js
