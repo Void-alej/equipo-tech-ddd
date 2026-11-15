@@ -220,9 +220,12 @@ class NexusMarketHttpServerTest {
             HttpResponse<String> afterPayment = request(
                     baseUrl, "GET", "/api/orders/" + orderId, buyerToken, null);
             assertEquals(200, afterPayment.statusCode());
-            assertTrue(json.readTree(afterPayment.body())
-                    .path("digitallyDeliveredProductIds").toString()
+            JsonNode paidOrder = json.readTree(afterPayment.body());
+            assertEquals(4, paidOrder.path("items").size());
+            assertTrue(paidOrder.path("digitallyDeliveredProductIds").toString()
                     .contains(digital.getId().toString()));
+            assertTrue(paidOrder.path("digitallyDeliveredProductIds").toString()
+                    .contains(secondDigital.getId().toString()));
 
             HttpResponse<String> loginLogistics = request(
                     baseUrl, "POST", "/api/auth/login", null,
@@ -307,24 +310,53 @@ class NexusMarketHttpServerTest {
             assertEquals(200, sellerReport.statusCode(), sellerReport.body());
             JsonNode report = json.readTree(sellerReport.body());
             JsonNode physicalSales = null;
+            JsonNode secondPhysicalSales = null;
             for (JsonNode item : report.path("salesByProduct")) {
                 if (physical.getId().toString().equals(
                         item.path("productId").asText())) {
                     physicalSales = item;
-                    break;
+                }
+                if (secondPhysical.getId().toString().equals(
+                        item.path("productId").asText())) {
+                    secondPhysicalSales = item;
                 }
             }
             assertNotNull(physicalSales);
-            assertEquals(2, physicalSales.path("unitsSold").asInt());
+            assertNotNull(secondPhysicalSales);
+
+            assertEquals(1, physicalSales.path("unitsSold").asInt());
             assertEquals(1, physicalSales.path("unitsRefunded").asInt());
             assertEquals(0, physicalSales.path("unitsInReturnProcess").asInt());
-            assertEquals(0, new BigDecimal("100000")
+            assertEquals(0, new BigDecimal("50000")
                     .compareTo(physicalSales.path("grossSales").decimalValue()));
             assertEquals(0, new BigDecimal("50000")
                     .compareTo(physicalSales.path("refundedAmount").decimalValue()));
-            assertEquals(0, new BigDecimal("50000")
-                    .compareTo(physicalSales.path("netSalesAfterRefunds").decimalValue()));
-            assertEquals(1, report.path("availableInventory").asInt());
+            assertEquals(0, BigDecimal.ZERO.compareTo(
+                    physicalSales.path("netSalesAfterRefunds").decimalValue()));
+
+            assertEquals(1, secondPhysicalSales.path("unitsSold").asInt());
+            assertEquals(0, secondPhysicalSales.path("unitsRefunded").asInt());
+            assertEquals(0, secondPhysicalSales.path("unitsInReturnProcess").asInt());
+            assertEquals(0, new BigDecimal("60000")
+                    .compareTo(secondPhysicalSales.path("grossSales").decimalValue()));
+            assertEquals(0, BigDecimal.ZERO.compareTo(
+                    secondPhysicalSales.path("refundedAmount").decimalValue()));
+            assertEquals(0, new BigDecimal("60000")
+                    .compareTo(secondPhysicalSales.path("netSalesAfterRefunds").decimalValue()));
+
+            assertEquals(3, report.path("availableInventory").asInt());
+
+            HttpResponse<String> orderAfterRefund = request(
+                    baseUrl, "GET", "/api/orders/" + orderId, buyerToken, null);
+            assertEquals(200, orderAfterRefund.statusCode());
+            JsonNode orderAfterReturn = json.readTree(orderAfterRefund.body());
+            assertEquals(4, orderAfterReturn.path("items").size());
+            assertTrue(orderAfterReturn.path("items").toString()
+                    .contains(secondPhysical.getId().toString()));
+            assertTrue(orderAfterReturn.path("items").toString()
+                    .contains(digital.getId().toString()));
+            assertTrue(orderAfterReturn.path("items").toString()
+                    .contains(secondDigital.getId().toString()));
 
             HttpResponse<String> buyerInventory = request(
                     baseUrl, "GET", "/api/inventory", buyerToken, null);
