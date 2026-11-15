@@ -14,13 +14,13 @@ import java.util.concurrent.ConcurrentMap;
 
 public class InMemoryShipmentRepository implements ShipmentRepository {
 
-    private record ShipmentKey(UUID orderId, UUID warehouseId) {}
+    private record ShipmentKey(UUID orderId, UUID warehouseId) implements java.io.Serializable {}
 
     private final ConcurrentMap<UUID, Shipment> shipments =
-            new ConcurrentHashMap<>();
+            PersistentConcurrentMap.create("shipments");
 
     private final ConcurrentMap<ShipmentKey, UUID> shipmentIdsByOrderWarehouse =
-            new ConcurrentHashMap<>();
+            PersistentConcurrentMap.create("shipment-index");
 
     @Override
     public synchronized void save(Shipment shipment) {
