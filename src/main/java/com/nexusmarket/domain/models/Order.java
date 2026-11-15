@@ -8,7 +8,9 @@ import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 import java.util.UUID;
 
 public class Order implements java.io.Serializable {
@@ -20,6 +22,7 @@ public class Order implements java.io.Serializable {
 
     private OrderStatus status;
     private PaymentStatus paymentStatus;
+    private final Set<UUID> digitallyDeliveredProductIds = new HashSet<>();
 
     public Order(UUID id, UUID buyerId, List<OrderItem> items) {
         if (id == null || buyerId == null) {
@@ -101,6 +104,28 @@ public class Order implements java.io.Serializable {
         status = OrderStatus.DELIVERED;
     }
 
+    /** Registra la entrega inmediata de un artículo digital después del pago. */
+    public void markDigitalItemDelivered(UUID productId) {
+        ensureNotFinalized();
+        if (status != OrderStatus.PAID || paymentStatus != PaymentStatus.APPROVED) {
+            throw new IllegalStateException(
+                    "Los artículos digitales solo se entregan después del pago aprobado.");
+        }
+        if (productId == null || items.stream().noneMatch(
+                item -> item.getProductId().equals(productId))) {
+            throw new IllegalArgumentException(
+                    "El producto digital debe pertenecer al pedido.");
+        }
+        digitallyDeliveredProductIds.add(productId);
+    }
+
+    public Set<UUID> getDigitallyDeliveredProductIds() {
+        return Set.copyOf(digitallyDeliveredProductIds);
+    }
+
+    public boolean isDigitalItemDelivered(UUID productId) {
+        return productId != null && digitallyDeliveredProductIds.contains(productId);
+    }
     public void finalizeOrder() {
         ensureNotFinalized();
 
@@ -141,6 +166,7 @@ public class Order implements java.io.Serializable {
 
         OrderStatus previousStatus = status;
         PaymentStatus previousPaymentStatus = paymentStatus;
+        Set<UUID> previousDigitalDeliveries = new HashSet<>(digitallyDeliveredProductIds);
 
         try {
             transition.run();
@@ -148,6 +174,8 @@ public class Order implements java.io.Serializable {
         } catch (RuntimeException exception) {
             status = previousStatus;
             paymentStatus = previousPaymentStatus;
+            digitallyDeliveredProductIds.clear();
+            digitallyDeliveredProductIds.addAll(previousDigitalDeliveries);
             throw exception;
         }
     }
