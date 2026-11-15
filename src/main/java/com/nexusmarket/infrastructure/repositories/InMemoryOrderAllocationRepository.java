@@ -16,10 +16,10 @@ public class InMemoryOrderAllocationRepository
         implements OrderAllocationRepository {
 
     private final ConcurrentMap<UUID, OrderAllocation> allocationsById =
-            new ConcurrentHashMap<>();
+            PersistentConcurrentMap.create("order-allocations");
 
     private final ConcurrentMap<UUID, List<UUID>> allocationIdsByOrder =
-            new ConcurrentHashMap<>();
+            PersistentConcurrentMap.create("order-allocation-index");
 
     private record AllocationKey(
             UUID orderId,

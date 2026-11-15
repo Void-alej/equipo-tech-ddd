@@ -5,7 +5,7 @@ import java.time.LocalDateTime;
 import java.util.List;
 import java.util.UUID;
 
-public final class Invoice {
+public final class Invoice implements java.io.Serializable {
 
     private final UUID id;
     private final UUID orderId;

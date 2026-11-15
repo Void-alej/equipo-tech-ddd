@@ -3,7 +3,7 @@ package com.nexusmarket.domain.models;
 import java.util.Objects;
 import java.util.UUID;
 
-public class ProductVariant {
+public class ProductVariant implements java.io.Serializable {
 
     private final UUID id;
     private final String description;

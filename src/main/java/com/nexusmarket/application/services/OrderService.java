@@ -24,6 +24,7 @@ import com.nexusmarket.domain.ports.out.ShipmentRepository;
 import com.nexusmarket.domain.ports.out.ProductRepository;
 import com.nexusmarket.domain.ports.out.UserRepository;
 import com.nexusmarket.domain.ports.out.WarehouseRepository;
+import com.nexusmarket.infrastructure.repositories.PersistentConcurrentMap;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -49,9 +50,9 @@ public class OrderService {
     private final ShipmentRepository shipmentRepository;
 
     private final Map<UUID, List<Reservation>> reservations =
-            new ConcurrentHashMap<>();
+            PersistentConcurrentMap.create("order-reservations");
 
-    private record Reservation(UUID productId, UUID warehouseId, int quantity) {}
+    private record Reservation(UUID productId, UUID warehouseId, int quantity) implements java.io.Serializable {}
 
     // Constructor compatible con las pruebas y usos anteriores.
     public OrderService(
@@ -413,19 +414,22 @@ public class OrderService {
         }
     }
 
-    private boolean containsOnlyDigitalProducts(Order order) {
+    private List<UUID> findDigitalProductIds(Order order) {
         if (productRepository == null) {
-            return false;
+            return List.of();
         }
 
-        return order.getItems().stream().allMatch(item -> {
-            var product = productRepository.findById(item.getProductId())
-                    .orElseThrow(() -> new IllegalStateException(
-                            "No se encontró el producto del pedido: "
-                                    + item.getProductId()));
-
-            return product.getType() == ProductType.DIGITAL;
-        });
+        return order.getItems().stream()
+                .filter(item -> {
+                    Product product = productRepository.findById(item.getProductId())
+                            .orElseThrow(() -> new IllegalStateException(
+                                    "No se encontró el producto del pedido: "
+                                            + item.getProductId()));
+                    return product.getType() == ProductType.DIGITAL;
+                })
+                .map(OrderItem::getProductId)
+                .distinct()
+                .toList();
     }
 
     public Order registerPayment(User actor, UUID orderId, boolean approved) {
@@ -447,8 +451,11 @@ public class OrderService {
                     "El pedido no está pendiente de pago.");
         }
 
-        boolean onlyDigitalOrder =
-                approved && containsOnlyDigitalProducts(order);
+        List<UUID> digitalProductIdsToDeliver =
+                approved ? findDigitalProductIds(order) : List.of();
+        boolean onlyDigitalOrder = approved
+                && !order.getItems().isEmpty()
+                && digitalProductIdsToDeliver.size() == order.getItems().size();
 
         List<Reservation> orderReservations =
                 new ArrayList<>(reservations.getOrDefault(orderId, List.of()));
@@ -500,6 +507,9 @@ public class OrderService {
             order.transitionAndPersist(
                     () -> {
                         order.registerPayment(approved);
+
+                        digitalProductIdsToDeliver.forEach(
+                                order::markDigitalItemDelivered);
 
                         if (onlyDigitalOrder) {
                             order.markDigitalDelivered();

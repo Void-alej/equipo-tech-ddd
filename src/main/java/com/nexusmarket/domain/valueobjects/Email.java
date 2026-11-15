@@ -4,7 +4,7 @@ import java.util.Locale;
 import java.util.Objects;
 import java.util.regex.Pattern;
 
-public final class Email {
+public final class Email implements java.io.Serializable {
 
     private static final Pattern EMAIL_PATTERN =
             Pattern.compile("^[A-Za-z0-9+_.-]+@[A-Za-z0-9.-]+\\.[A-Za-z]{2,}$");

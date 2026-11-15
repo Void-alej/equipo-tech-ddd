@@ -2,7 +2,7 @@ package com.nexusmarket.domain.models;
 
 import java.util.UUID;
 
-public final class ShipmentItem {
+public final class ShipmentItem implements java.io.Serializable {
 
     private final UUID productId;
     private final String productName;

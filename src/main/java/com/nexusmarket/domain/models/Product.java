@@ -10,7 +10,7 @@ import java.util.List;
 import java.util.Objects;
 import java.util.UUID;
 
-public class Product {
+public class Product implements java.io.Serializable {
 
     private final UUID id;
     private final UUID sellerId;

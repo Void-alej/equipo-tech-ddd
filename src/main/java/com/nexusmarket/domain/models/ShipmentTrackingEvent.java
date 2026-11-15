@@ -5,7 +5,7 @@ import com.nexusmarket.domain.enums.ShipmentStatus;
 import java.time.LocalDateTime;
 import java.util.UUID;
 
-public final class ShipmentTrackingEvent {
+public final class ShipmentTrackingEvent implements java.io.Serializable {
 
     private final UUID id;
     private final ShipmentStatus status;

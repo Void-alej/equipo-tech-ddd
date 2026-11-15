@@ -382,6 +382,11 @@ class OrderServiceTest {
 
         assertEquals(OrderStatus.PAID, order.getStatus());
         assertEquals(PaymentStatus.APPROVED, order.getPaymentStatus());
+        assertTrue(order.isDigitalItemDelivered(digitalProduct.getId()));
+        assertFalse(order.isDigitalItemDelivered(product.getId()));
+        assertEquals(
+                java.util.Set.of(digitalProduct.getId()),
+                order.getDigitallyDeliveredProductIds());
     }
 
     @Test

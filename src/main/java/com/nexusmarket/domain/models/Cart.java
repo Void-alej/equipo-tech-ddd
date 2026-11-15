@@ -7,7 +7,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
 
-public class Cart {
+public class Cart implements java.io.Serializable {
 
     private final UUID id;
     private final UUID buyerId;

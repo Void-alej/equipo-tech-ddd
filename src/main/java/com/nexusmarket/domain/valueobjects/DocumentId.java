@@ -3,7 +3,7 @@ package com.nexusmarket.domain.valueobjects;
 import java.util.Locale;
 import java.util.Objects;
 
-public final class DocumentId {
+public final class DocumentId implements java.io.Serializable {
 
     private final String value;
 

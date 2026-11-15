@@ -7,7 +7,7 @@ import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.UUID;
 
-public class ReturnRequest {
+public class ReturnRequest implements java.io.Serializable {
 
     private final UUID id;
     private final UUID orderId;

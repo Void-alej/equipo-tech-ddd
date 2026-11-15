@@ -8,7 +8,7 @@ import com.nexusmarket.domain.valueobjects.Email;
 import java.util.Objects;
 import java.util.UUID;
 
-public class User {
+public class User implements java.io.Serializable {
 
     private final UUID id;
     private String fullName;

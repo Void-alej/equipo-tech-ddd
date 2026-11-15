@@ -7,7 +7,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
 
-public class Shipment {
+public class Shipment implements java.io.Serializable {
 
     private final UUID id;
     private final UUID orderId;

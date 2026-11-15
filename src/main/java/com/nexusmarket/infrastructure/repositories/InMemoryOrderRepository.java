@@ -11,7 +11,7 @@ import java.util.concurrent.ConcurrentMap;
 
 public class InMemoryOrderRepository implements OrderRepository {
 
-    private final ConcurrentMap<UUID, Order> orders = new ConcurrentHashMap<>();
+    private final ConcurrentMap<UUID, Order> orders = PersistentConcurrentMap.create("orders");
 
     @Override
     public void save(Order order) {

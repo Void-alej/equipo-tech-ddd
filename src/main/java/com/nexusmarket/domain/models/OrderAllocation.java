@@ -7,7 +7,7 @@ import java.util.UUID;
  * Registro histórico de la asignación de un producto
  * a una bodega dentro de un pedido.
  */
-public final class OrderAllocation {
+public final class OrderAllocation implements java.io.Serializable {
 
     private final UUID id;
     private final UUID orderId;

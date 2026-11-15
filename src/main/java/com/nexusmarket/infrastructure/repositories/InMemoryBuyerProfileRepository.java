@@ -11,7 +11,7 @@ import java.util.concurrent.ConcurrentMap;
 public class InMemoryBuyerProfileRepository implements BuyerProfileRepository {
 
     private final ConcurrentMap<UUID, BuyerProfile> profiles =
-            new ConcurrentHashMap<>();
+            PersistentConcurrentMap.create("buyer-profiles");
 
     @Override
     public void save(BuyerProfile profile) {

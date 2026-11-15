@@ -5,7 +5,7 @@ import com.nexusmarket.domain.enums.BuyerCommercialStatus;
 import java.util.List;
 import java.util.UUID;
 
-public class BuyerProfile {
+public class BuyerProfile implements java.io.Serializable {
 
     private final UUID buyerId;
     private String primaryAddress;

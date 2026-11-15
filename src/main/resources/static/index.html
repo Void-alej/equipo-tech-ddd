@@ -1,0 +1,334 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>NexusMarket · Panel de operación</title>
+<style>
+:root{--bg:#f3f5f9;--surface:#fff;--ink:#172033;--muted:#64748b;--line:#e4e9f1;--accent:#3157d5;--accent2:#203fa8;--good:#137a55;--bad:#b42318;--shadow:0 12px 34px rgba(28,43,75,.08)}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--ink);font:14px/1.5 Inter,ui-sans-serif,system-ui,-apple-system,"Segoe UI",sans-serif}
+button,input,select,textarea{font:inherit}button{cursor:pointer;border:0;border-radius:9px;padding:10px 14px;background:var(--accent);color:white;font-weight:650}button:hover{background:var(--accent2)}button.secondary{background:#edf1fb;color:#2947a4}button.ghost{background:transparent;color:var(--muted);border:1px solid var(--line)}button.danger{background:#fff0ef;color:#a52c24}button:disabled{opacity:.55;cursor:not-allowed}
+.login-wrap{min-height:100vh;display:grid;place-items:center;padding:24px}.login-card{width:min(430px,100%);background:white;border:1px solid var(--line);border-radius:18px;padding:30px;box-shadow:var(--shadow)}.brand{display:flex;align-items:center;gap:12px;font-size:20px;font-weight:800;letter-spacing:-.5px}.brand-mark{width:40px;height:40px;border-radius:12px;background:#e9edff;color:var(--accent);display:grid;place-items:center;font-weight:900}.muted{color:var(--muted)}.hint{font-size:12px;color:var(--muted);background:#f7f8fc;padding:12px;border-radius:10px;margin-top:16px}
+input,select,textarea{width:100%;border:1px solid var(--line);border-radius:9px;padding:10px 11px;background:white;color:var(--ink);outline:none}input:focus,select:focus,textarea:focus{border-color:#879bea;box-shadow:0 0 0 3px #e9edff}label{display:block;font-size:12px;font-weight:700;color:#45516a;margin:10px 0 5px}.form-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:4px 12px}.form-grid .full{grid-column:1/-1}.form-actions{display:flex;gap:8px;margin-top:14px;flex-wrap:wrap}
+.shell{display:none;min-height:100vh}.topbar{height:70px;background:#fff;border-bottom:1px solid var(--line);display:flex;align-items:center;justify-content:space-between;padding:0 26px;position:sticky;top:0;z-index:5}.top-right{display:flex;align-items:center;gap:12px}.user-chip{background:#f4f6fb;padding:7px 11px;border-radius:999px;font-size:12px}.layout{display:grid;grid-template-columns:220px 1fr;max-width:1600px;margin:auto}.sidebar{padding:22px 14px;border-right:1px solid var(--line);min-height:calc(100vh - 70px);background:#fafbfe}.nav-title{font-size:10px;font-weight:800;letter-spacing:1px;color:#8b95a8;padding:8px 11px}.nav-btn{display:flex;align-items:center;gap:10px;width:100%;text-align:left;background:transparent;color:#526078;margin:2px 0;padding:11px;border-radius:9px}.nav-btn:hover,.nav-btn.active{background:#e9edff;color:#2847b1}.main{padding:28px;min-width:0}.page-head{display:flex;justify-content:space-between;gap:20px;align-items:flex-start;margin-bottom:22px}.page-head h1{font-size:24px;letter-spacing:-.7px;margin:0 0 4px}.page-head p{margin:0;color:var(--muted)}.section{display:none}.section.active{display:block}.grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:16px}.card{background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:18px;box-shadow:0 2px 8px rgba(28,43,75,.025);min-width:0}.card h2{font-size:15px;margin:0 0 5px}.card p.sub{font-size:12px;color:var(--muted);margin:0 0 12px}.stats{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px;margin-bottom:16px}.stat{background:white;border:1px solid var(--line);border-radius:12px;padding:14px}.stat b{display:block;font-size:24px}.stat span{color:var(--muted);font-size:12px}.data-list{display:grid;gap:8px;max-height:440px;overflow:auto}.data-item{border:1px solid var(--line);border-radius:10px;padding:10px 12px;background:#fff;display:flex;justify-content:space-between;gap:12px;align-items:center}.data-item small{display:block;color:var(--muted);word-break:break-all}.data-item code{font-size:11px;word-break:break-all;color:#45516a}.tag{display:inline-flex;padding:3px 8px;border-radius:100px;background:#eef2ff;color:#314fae;font-size:11px;font-weight:700}.output{white-space:pre-wrap;word-break:break-word;background:#111827;color:#d9e2f2;border-radius:10px;padding:14px;min-height:90px;max-height:420px;overflow:auto;font:12px/1.55 ui-monospace,SFMono-Regular,Consolas,monospace}.notice{padding:12px 14px;border-radius:10px;background:#eef3ff;color:#304b9f;margin-bottom:15px;font-size:13px}.error{background:#fff0ef;color:#a52c24}.success{background:#eaf8f1;color:#126b4b}.inline{display:flex;gap:8px;align-items:center;flex-wrap:wrap}.id-field{display:flex;gap:6px}.id-field input{flex:1}.small{font-size:11px;color:var(--muted)}.divider{border:0;border-top:1px solid var(--line);margin:16px 0}.empty{color:var(--muted);font-size:13px;padding:16px;text-align:center}
+@media(max-width:900px){.layout{grid-template-columns:1fr}.sidebar{display:flex;overflow:auto;min-height:0;border-right:0;border-bottom:1px solid var(--line);padding:8px}.nav-title{display:none}.nav-btn{white-space:nowrap;width:auto}.main{padding:18px}.stats{grid-template-columns:repeat(2,1fr)}}
+@media(max-width:620px){.grid,.form-grid{grid-template-columns:1fr}.form-grid .full{grid-column:auto}.topbar{padding:0 14px}.topbar .brand{font-size:16px}.user-chip{display:none}.page-head{display:block}.main{padding:12px}.stats{gap:8px}}
+</style>
+</head>
+<body>
+<div id="loginView" class="login-wrap">
+  <div class="login-card">
+    <div class="brand"><div class="brand-mark">N</div><div>NexusMarket<div class="muted" style="font-size:11px;font-weight:500;letter-spacing:0">Panel de operación y sustentación</div></div></div>
+    <h1 style="font-size:22px;margin:28px 0 2px">Iniciar sesión</h1>
+    <p class="muted" style="margin:0 0 18px">Accede con la cuenta del rol que vas a demostrar.</p>
+    <form id="loginForm">
+      <label>Correo electrónico</label><input name="email" type="email" autocomplete="username" required value="admin@nexusmarket.local">
+      <label>Contraseña</label><input name="password" type="password" autocomplete="current-password" required value="Admin123!">
+      <div class="form-actions"><button style="width:100%">Entrar al sistema</button></div>
+    </form>
+    <div id="loginMessage" class="notice" style="display:none;margin-top:14px"></div>
+    <div class="hint"><b>Cuenta inicial de demostración</b><br>admin@nexusmarket.local<br>Admin123!<br><span class="small">Configura NEXUSMARKET_ADMIN_PASSWORD para cambiar la contraseña inicial.</span></div>
+  </div>
+</div>
+
+<div id="app" class="shell">
+  <header class="topbar">
+    <div class="brand"><div class="brand-mark">N</div>NexusMarket</div>
+    <div class="top-right"><span class="user-chip" id="userChip"></span><button class="ghost" id="refreshBtn">Actualizar GET</button><button class="ghost" id="logoutBtn">Cerrar sesión</button></div>
+  </header>
+  <div class="layout">
+    <aside class="sidebar">
+      <div class="nav-title">OPERACIÓN</div>
+      <button class="nav-btn active" data-section="overview">▦ Resumen</button>
+      <button class="nav-btn" data-section="users" data-roles="ADMINISTRATOR">♙ Usuarios</button>
+      <button class="nav-btn" data-section="catalog" data-roles="SELLER,BUYER,ADMINISTRATOR,SUPERVISOR">▤ Catálogo</button>
+      <button class="nav-btn" data-section="inventory" data-roles="SELLER,LOGISTICS_OPERATOR,ADMINISTRATOR,SUPERVISOR">▥ Inventario</button>
+      <button class="nav-btn" data-section="cart" data-roles="BUYER">▣ Carrito y pedidos</button>
+      <button class="nav-btn" data-section="orders" data-roles="BUYER,SELLER,LOGISTICS_OPERATOR,ADMINISTRATOR,SUPERVISOR">≡ Pedidos</button>
+      <button class="nav-btn" data-section="logistics" data-roles="LOGISTICS_OPERATOR,ADMINISTRATOR,SUPERVISOR,BUYER">⇢ Logística</button>
+      <button class="nav-btn" data-section="returns" data-roles="BUYER,ADMINISTRATOR,SELLER">↶ Devoluciones</button>
+      <button class="nav-btn" data-section="reports" data-roles="SELLER,ADMINISTRATOR,SUPERVISOR">▧ Reportes</button>
+    </aside>
+    <main class="main">
+      <div class="page-head"><div><h1 id="pageTitle">Resumen</h1><p id="pageSubtitle">Estado actual del marketplace y verificaciones de consulta.</p></div><span class="tag" id="roleTag"></span></div>
+      <div id="globalMessage" class="notice" style="display:none"></div>
+
+      <section id="overview" class="section active">
+        <div class="stats">
+          <div class="stat"><b id="statProducts">—</b><span>Productos consultados</span></div>
+          <div class="stat"><b id="statOrders">—</b><span>Pedidos consultados</span></div>
+          <div class="stat"><b id="statInventory">—</b><span>Registros de inventario</span></div>
+          <div class="stat"><b id="statReturns">—</b><span>Devoluciones consultadas</span></div>
+        </div>
+        <div class="grid">
+          <div class="card"><h2>Sesión activa</h2><p class="sub">El servidor identifica el usuario por el token y consulta el rol registrado.</p><div id="meSummary" class="output"></div></div>
+          <div class="card"><h2>Verificación inmediata</h2><p class="sub">Después de cada operación la interfaz vuelve a consultar los endpoints GET.</p><div id="verificationLog" class="output">Esperando la primera consulta…</div></div>
+        </div>
+        <div class="card" style="margin-top:16px"><h2>Guía de sustentación</h2><p class="sub">Secuencia sugerida: crear 3 compradores y perfiles; registrar un vendedor y sus productos; ingresar existencias físicas; comprar como cada comprador; pagar; despachar; devolver un artículo; consultar reportes; reiniciar y volver a iniciar sesión para comparar.</p><p class="small">El pago está simulado mediante aprobación/rechazo. La devolución registra la referencia de reembolso; no realiza transferencia bancaria real.</p></div>
+      </section>
+
+      <section id="users" class="section">
+        <div class="grid">
+          <div class="card"><h2>Crear comprador</h2><p class="sub">Crea usuario, perfil comercial y credencial en una sola operación de demostración.</p>
+            <form id="buyerForm" class="form-grid">
+              <div class="full"><label>Nombre completo</label><input name="fullName" required></div>
+              <div><label>Correo</label><input name="email" type="email" required></div>
+              <div><label>Documento</label><input name="documentId" required></div>
+              <div class="full"><label>Dirección principal</label><input name="primaryAddress" required></div>
+              <div class="full"><label>Direcciones adicionales (separadas por punto y coma)</label><input name="additionalAddresses"></div>
+              <div class="full"><label>Contraseña (mínimo 8 caracteres)</label><input name="password" type="password" minlength="8" required></div>
+              <div class="full form-actions"><button>Crear comprador</button></div>
+            </form>
+          </div>
+          <div class="card"><h2>Incorporar vendedor</h2><p class="sub">La incorporación administrativa intenta crear su primera bodega.</p>
+            <form id="sellerForm" class="form-grid">
+              <div class="full"><label>Nombre completo</label><input name="fullName" required></div>
+              <div><label>Correo</label><input name="email" type="email" required></div>
+              <div><label>Documento</label><input name="documentId" required></div>
+              <div><label>Nombre de primera bodega</label><input name="warehouseName" required></div>
+              <div><label>Dirección de la bodega</label><input name="warehouseAddress" required></div>
+              <div class="full"><label>Contraseña (mínimo 8 caracteres)</label><input name="password" type="password" minlength="8" required></div>
+              <div class="full form-actions"><button>Registrar vendedor</button></div>
+            </form>
+          </div>
+          <div class="card"><h2>Crear operador logístico</h2><p class="sub">Para cambiar de rol, cierra sesión e inicia con la cuenta creada.</p>
+            <form id="operatorForm" class="form-grid">
+              <div class="full"><label>Nombre completo</label><input name="fullName" required></div>
+              <div><label>Correo</label><input name="email" type="email" required></div>
+              <div><label>Documento</label><input name="documentId" required></div>
+              <div class="full"><label>Contraseña (mínimo 8 caracteres)</label><input name="password" type="password" minlength="8" required></div>
+              <div class="full form-actions"><button>Crear operador</button></div>
+            </form>
+          </div>
+          <div class="card"><h2>Usuarios registrados (GET)</h2><p class="sub">Consulta administrativa después de cada alta.</p><div id="usersList" class="data-list"></div></div>
+        </div>
+      </section>
+
+      <section id="catalog" class="section">
+        <div class="grid">
+          <div class="card" data-roles="SELLER"><h2>Registrar producto</h2><p class="sub">El vendedor registra productos físicos o digitales y después los publica.</p>
+            <form id="productForm" class="form-grid">
+              <div class="full"><label>Nombre</label><input name="name" required></div>
+              <div class="full"><label>Descripción</label><textarea name="description" rows="2"></textarea></div>
+              <div><label>Tipo</label><select name="type"><option value="PHYSICAL">Físico</option><option value="DIGITAL">Digital</option></select></div>
+              <div><label>Precio</label><input name="price" type="number" min="0.01" step="0.01" required></div>
+              <div class="full form-actions"><button>Crear producto</button></div>
+            </form>
+          </div>
+          <div class="card"><h2>Catálogo consultado (GET)</h2><p class="sub">Los compradores consultan productos publicados; cada vendedor consulta los propios.</p><div id="productsList" class="data-list"></div></div>
+        </div>
+      </section>
+
+      <section id="inventory" class="section">
+        <div class="grid">
+          <div class="card" data-roles="SELLER,LOGISTICS_OPERATOR"><h2>Ingresar existencias</h2><p class="sub">Solo para productos físicos. Vendedor opera sus productos y bodega; logística opera bodega Marketplace.</p>
+            <form id="stockForm" class="form-grid">
+              <div class="full"><label>Producto (UUID)</label><input name="productId" required></div>
+              <div class="full"><label>Bodega (UUID)</label><input name="warehouseId" required></div>
+              <div><label>Cantidad</label><input name="quantity" type="number" min="1" step="1" required></div>
+              <div><label>Descripción</label><input name="description" value="Ingreso para demostración" required></div>
+              <div class="full form-actions"><button>Registrar ingreso</button></div>
+            </form>
+          </div>
+          <div class="card"><h2>Bodegas (GET)</h2><p class="sub">Usa el identificador de la bodega para asociar existencias.</p><div id="warehousesList" class="data-list"></div></div>
+          <div class="card" style="grid-column:1/-1"><h2>Inventario disponible (GET)</h2><p class="sub">Se vuelve a consultar luego de cada movimiento.</p><div id="inventoryList" class="data-list"></div></div>
+        </div>
+      </section>
+
+      <section id="cart" class="section">
+        <div class="grid">
+          <div class="card"><h2>Carrito del comprador</h2><p class="sub">Crea el carrito y agrega productos. Si la cantidad física supera el disponible, la API bloquea la operación.</p>
+            <div class="form-actions"><button id="createCartBtn">Crear carrito</button></div>
+            <label>Identificador del carrito</label><input id="cartId" placeholder="Se asigna al crear el carrito">
+            <form id="cartItemForm">
+              <label>Producto (UUID)</label><input name="productId" required>
+              <label>Cantidad</label><input name="quantity" type="number" min="1" value="1" required>
+              <div class="form-actions"><button>Agregar al carrito</button></div>
+            </form>
+            <hr class="divider"><div class="form-actions"><button id="createOrderBtn" class="secondary">Confirmar carrito y crear pedido</button></div>
+          </div>
+          <div class="card"><h2>Carrito consultado (GET)</h2><p class="sub">La interfaz consulta el contenido después de cada agregado.</p><div id="cartView" class="output">Aún no hay carrito seleccionado.</div></div>
+        </div>
+      </section>
+
+      <section id="orders" class="section">
+        <div class="grid">
+          <div class="card"><h2>Pedidos (GET)</h2><p class="sub">Comprador consulta los propios; vendedor ve únicamente sus artículos.</p><div id="ordersList" class="data-list"></div></div>
+          <div class="card" data-roles="BUYER"><h2>Registrar pago (simulado)</h2><p class="sub">Selecciona el identificador del pedido. La aprobación mueve el pedido al siguiente estado.</p>
+            <form id="payForm">
+              <label>Pedido (UUID)</label><input name="orderId" required>
+              <label>Resultado</label><select name="approved"><option value="true">Aprobado</option><option value="false">Rechazado</option></select>
+              <div class="form-actions"><button>Procesar pago</button></div>
+            </form>
+            <form id="invoiceForm"><label>Emitir factura para pedido (UUID)</label><input name="orderId" required><div class="form-actions"><button class="secondary">Emitir factura</button></div></form>
+            <hr class="divider"><h2>Facturas (GET)</h2><div id="invoicesList" class="data-list"></div>
+          </div>
+        </div>
+      </section>
+
+      <section id="logistics" class="section">
+        <div class="grid">
+          <div class="card" data-roles="LOGISTICS_OPERATOR,ADMINISTRATOR"><h2>Crear envíos del pedido</h2><p class="sub">Se genera un envío por cada bodega con productos asignados.</p><form id="createShipmentsForm"><label>Pedido pagado (UUID)</label><input name="orderId" required><div class="form-actions"><button>Crear envíos</button></div></form></div>
+          <div class="card" data-roles="LOGISTICS_OPERATOR,ADMINISTRATOR"><h2>Actualizar estado logístico</h2><p class="sub">Ejecuta las transiciones en orden: empacar → despachar → tránsito → entregar.</p>
+            <form id="shipmentForm">
+              <label>Envío (UUID)</label><input name="shipmentId" required>
+              <label>Operación</label><select name="action"><option value="pack">Empacar</option><option value="dispatch">Despachar</option><option value="transit">Marcar en tránsito</option><option value="deliver">Confirmar entrega</option></select>
+              <label>Descripción</label><input name="description" value="Actualización desde panel">
+              <div class="form-actions"><button>Actualizar envío</button></div>
+            </form>
+          </div>
+          <div class="card" style="grid-column:1/-1"><h2>Envíos (GET)</h2><p class="sub">Verifica el estado y el seguimiento de los pedidos.</p><div id="shipmentsList" class="data-list"></div></div>
+        </div>
+      </section>
+
+      <section id="returns" class="section">
+        <div class="grid">
+          <div class="card" data-roles="BUYER"><h2>Solicitar devolución</h2><p class="sub">Debe corresponder a un producto de un pedido entregado o finalizado.</p>
+            <form id="returnRequestForm">
+              <label>Pedido (UUID)</label><input name="orderId" required>
+              <label>Producto (UUID)</label><input name="productId" required>
+              <label>Cantidad</label><input name="quantity" type="number" min="1" value="1" required>
+              <label>Motivo</label><textarea name="reason" rows="2" required></textarea>
+              <div class="form-actions"><button>Solicitar devolución</button></div>
+            </form>
+          </div>
+          <div class="card" data-roles="ADMINISTRATOR"><h2>Aprobar solicitud y reembolsar</h2><p class="sub">Admin aprueba la solicitud y confirma el reembolso mediante referencia.</p>
+            <form id="returnApproveForm"><label>Devolución (UUID)</label><input name="returnId" required><div class="form-actions"><button>Aprobar devolución</button></div></form>
+            <hr class="divider">
+            <form id="refundForm"><label>Devolución (UUID)</label><input name="returnId" required><label>Referencia de reembolso</label><input name="refundReference" required><div class="form-actions"><button>Confirmar reembolso</button></div></form>
+          </div>
+          <div class="card" data-roles="LOGISTICS_OPERATOR,ADMINISTRATOR"><h2>Recepción física</h2><p class="sub">Los productos aptos ingresan al inventario; los dañados no aumentan existencias.</p>
+            <form id="returnReceiveForm">
+              <label>Devolución (UUID)</label><input name="returnId" required>
+              <label>Bodega de recepción (UUID)</label><input name="warehouseId" required>
+              <label>Condición</label><select name="condition"><option value="SELLABLE">Apto para venta</option><option value="DAMAGED">Dañado</option></select>
+              <div class="form-actions"><button>Registrar recepción</button></div>
+            </form>
+          </div>
+          <div class="card"><h2>Devoluciones (GET)</h2><p class="sub">La consulta se actualiza después de solicitar, aprobar, recibir o reembolsar.</p><div id="returnsList" class="data-list"></div></div>
+        </div>
+      </section>
+
+      <section id="reports" class="section">
+        <div class="grid">
+          <div class="card" data-roles="SELLER"><h2>Reporte del vendedor</h2><p class="sub">Ventas, existencias disponibles, pedidos, devoluciones y movimientos.</p><button id="sellerReportBtn">Consultar reporte (GET)</button><div id="sellerReport" class="output" style="margin-top:12px">Sin consulta.</div></div>
+          <div class="card" data-roles="ADMINISTRATOR,SUPERVISOR"><h2>Reporte administrativo</h2><p class="sub">Consolidado de usuarios, catálogo, inventario, pedidos, facturas, envíos y devoluciones.</p><button id="adminReportBtn">Consultar reporte (GET)</button><div id="adminReport" class="output" style="margin-top:12px">Sin consulta.</div></div>
+        </div>
+      </section>
+      <div class="card" style="margin-top:16px"><h2>Respuesta reciente de la API</h2><p class="sub">Código y contenido de la operación o consulta ejecutada.</p><div id="apiOutput" class="output">Listo.</div></div>
+    </main>
+  </div>
+</div>
+
+<script>
+const state={token:null,me:null,cartId:sessionStorage.getItem("nexusCartId")||null};
+const $=s=>document.querySelector(s);
+const $$=s=>[...document.querySelectorAll(s)];
+const titles={overview:["Resumen","Estado actual del marketplace y verificaciones de consulta."],users:["Usuarios","Altas administrativas y consulta de usuarios registrados."],catalog:["Catálogo","Registro y consulta de productos físicos y digitales."],inventory:["Inventario","Bodegas, existencias y movimientos por producto."],cart:["Carrito y pedidos","Compra de productos y validación de existencias."],orders:["Pedidos","Pago, estado de los pedidos y facturación."],logistics:["Logística","Preparación, despacho, transporte y entrega."],returns:["Devoluciones","Solicitud, aprobación, recepción y reembolso."],reports:["Reportes","Consolidación por vendedor y reporte administrativo."]};
+function showMessage(el,text,type="notice"){el.className="notice "+type;el.textContent=text;el.style.display="block"}
+function clearMessage(el){el.style.display="none"}
+function output(value){$("#apiOutput").textContent=typeof value==="string"?value:JSON.stringify(value,null,2)}
+function formData(form){return Object.fromEntries(new FormData(form).entries())}
+async function api(path,method="GET",body=null){
+ const headers={};if(state.token)headers.Authorization="Bearer "+state.token;if(body!==null)headers["Content-Type"]="application/json";
+ const url=path.startsWith("/api/")?path:"/api"+path;const response=await fetch(url,{method,headers,body:body===null?undefined:JSON.stringify(body)});
+ const text=await response.text();let data=null;try{data=text?JSON.parse(text):null}catch{data=text}
+ if(!response.ok){const message=data&&data.error?data.error:(response.status+" "+response.statusText);throw new Error(message)}
+ output({method,path,status:response.status,data});
+ return data;
+}
+function allowed(node){const roles=(node.dataset.roles||"").split(",").filter(Boolean);return !roles.length||roles.includes(state.me.role)}
+function applyRole(){
+ $("#userChip").textContent=state.me.name+" · "+state.me.email;
+ $("#roleTag").textContent=state.me.role;
+ $$("[data-roles]").forEach(node=>node.style.display=allowed(node)?"":"none");
+ $$(".nav-btn[data-roles]").forEach(node=>node.style.display=allowed(node)?"":"none");
+}
+function showApp(){ $("#loginView").style.display="none";$("#app").style.display="block";applyRole();showSection("overview");refreshAll().catch(e=>showGlobalError(e.message)); }
+function showSection(id){
+ const section=$("#"+id);if(!section||!allowed(section))return;
+ $$(".section").forEach(x=>x.classList.remove("active"));section.classList.add("active");
+ $$(".nav-btn").forEach(x=>x.classList.toggle("active",x.dataset.section===id));
+ $("#pageTitle").textContent=titles[id][0];$("#pageSubtitle").textContent=titles[id][1];
+}
+function showGlobalError(message){showMessage($("#globalMessage"),message,"error")}
+async function load(path,elementId,formatter){
+ try{const data=await api(path);const el=$("#"+elementId);if(!el)return data;el.innerHTML=formatter?formatter(data):'<pre>'+escapeHtml(JSON.stringify(data,null,2))+'</pre>';return data}catch(e){const el=$("#"+elementId);if(el)el.innerHTML='<div class="empty">'+escapeHtml(e.message)+'</div>';return null}
+}
+function escapeHtml(value){return String(value??"").replace(/[&<>"']/g,ch=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[ch]))}
+function listHtml(items,titleFn,detailFn,extraFn){if(!items||!items.length)return '<div class="empty">Sin registros.</div>';return items.map(item=>'<div class="data-item"><div><b>'+escapeHtml(titleFn(item))+'</b><small>'+escapeHtml(detailFn(item))+'</small><code>'+escapeHtml(item.id||item.orderId||"")+'</code></div>'+(extraFn?extraFn(item):"")+'</div>').join("")}
+async function refreshAll(){
+ const checks=[["/api/me",null],["/api/products","productsList"],["/api/orders","ordersList"]];
+ if(state.me.role!=="BUYER")checks.push(["/api/inventory","inventoryList"]);
+ if(state.me.role==="BUYER"){
+   checks.push(["/api/buyer-profile/me",null]);
+   checks.push(["/api/invoices","invoicesList"]);
+ }
+ if(["ADMINISTRATOR","SUPERVISOR","SELLER","LOGISTICS_OPERATOR"].includes(state.me.role))checks.push(["/api/warehouses","warehousesList"]);
+ if(state.me.role!=="SELLER")checks.push(["/api/shipments","shipmentsList"]);
+ if(["BUYER","ADMINISTRATOR","SELLER"].includes(state.me.role))checks.push(["/api/returns","returnsList"]);
+ if(state.me.role==="ADMINISTRATOR")checks.push(["/api/users","usersList"]);
+ const results=await Promise.all(checks.map(async([path,id])=>{try{const data=await api(path);if(id)renderCollection(id,data);return [path,data]}catch(e){if(id)$("#"+id).innerHTML='<div class="empty">'+escapeHtml(e.message)+'</div>';return [path,null]}}));
+ const byPath=Object.fromEntries(results);
+ $("#statProducts").textContent=Array.isArray(byPath["/api/products"])?byPath["/api/products"].length:"—";
+ $("#statOrders").textContent=Array.isArray(byPath["/api/orders"])?byPath["/api/orders"].length:"—";
+ $("#statInventory").textContent=Array.isArray(byPath["/api/inventory"])?byPath["/api/inventory"].length:"—";
+ $("#statReturns").textContent=Array.isArray(byPath["/api/returns"])?byPath["/api/returns"].length:"—";
+ $("#meSummary").textContent=JSON.stringify(byPath["/api/me"]||state.me,null,2);
+ $("#verificationLog").textContent=results.map(([path,data])=>(data?"GET OK ":"GET ERROR ")+path).join("\n");
+ if(state.me.role==="BUYER"&&state.cartId)await loadCart();
+}
+function renderCollection(id,data){
+ const items=Array.isArray(data)?data:[];
+ let html="";
+ if(id==="usersList")html=listHtml(items,x=>x.fullName||x.name,x=>x.email+" · "+x.role+" · "+x.status);
+ if(id==="productsList")html=listHtml(items,x=>x.name,x=>x.type+" · "+x.status+" · $"+x.price,x=>state.me.role==="SELLER"&&x.status!=="PUBLISHED"?'<button class="secondary publish-btn" data-id="'+x.id+'">Publicar</button>':"");
+ if(id==="warehousesList")html=listHtml(items,x=>x.name,x=>x.address+" · "+x.type);
+ if(id==="inventoryList")html=listHtml(items,x=>x.productId,x=>"Total "+x.quantity+" · reservado "+x.reservedQuantity+" · disponible "+(x.quantity-x.reservedQuantity));
+ if(id==="ordersList")html=listHtml(items,x=>x.orderId||x.id,x=>(x.status||"")+" · Pago "+(x.paymentStatus||"")+" · "+(x.items?.length||0)+" artículo(s)");
+ if(id==="shipmentsList")html=listHtml(items,x=>x.id,x=>"Pedido "+x.orderId+" · estado "+x.status);
+ if(id==="returnsList")html=listHtml(items,x=>x.productName,x=>x.status+" · cantidad "+x.quantity+" · reembolso "+x.refundAmount);
+ if(id==="invoicesList")html=listHtml(items,x=>"Factura · pedido "+x.orderId,x=>"Total $"+x.total+" · emitida "+x.issuedAt);
+ $("#"+id).innerHTML=html||'<div class="empty">Sin registros o consulta no disponible.</div>';
+}
+async function loadCart(){if(!state.cartId)return;$("#cartId").value=state.cartId;const cart=await api("/api/carts/"+state.cartId);$("#cartView").textContent=JSON.stringify(cart,null,2)}
+async function runAction(path,method,body,verify=true){
+ clearMessage($("#globalMessage"));
+ try{const result=await api(path,method,body);showMessage($("#globalMessage"),"Operación completada. Se consultarán los datos actualizados mediante GET.","success");if(verify)await refreshAll();return result}
+ catch(e){showGlobalError(e.message);throw e}
+}
+function bindForm(id,path,mapper=(x)=>x,after=null){
+ $("#"+id)?.addEventListener("submit",async e=>{e.preventDefault();const form=e.currentTarget;try{const result=await runAction(path,"POST",mapper(formData(form)));form.reset();if(after)await after(result)}catch{}});
+}
+$("#loginForm").addEventListener("submit",async e=>{
+ e.preventDefault();const data=formData(e.currentTarget);
+ try{const session=await api("/auth/login","POST",data);state.token=session.token;state.me=session.user;sessionStorage.setItem("nexusToken",state.token);showApp()}
+ catch(err){showMessage($("#loginMessage"),err.message,"error")}
+});
+$("#logoutBtn").addEventListener("click",async()=>{try{await api("/auth/logout","POST",{})}catch{}state.token=null;state.me=null;sessionStorage.removeItem("nexusToken");$("#app").style.display="none";$("#loginView").style.display="grid"});
+$("#refreshBtn").addEventListener("click",()=>refreshAll().catch(e=>showGlobalError(e.message)));
+$$(".nav-btn").forEach(btn=>btn.addEventListener("click",()=>showSection(btn.dataset.section)));
+bindForm("buyerForm","/buyers",x=>({...x,additionalAddresses:x.additionalAddresses?x.additionalAddresses.split(";").map(v=>v.trim()).filter(Boolean):[]}),async result=>{await api("/buyers/"+result.user.id+"/profile");});
+bindForm("sellerForm","/sellers");
+bindForm("operatorForm","/logistics-operators");
+bindForm("productForm","/products",x=>({...x,price:Number(x.price)}));
+bindForm("stockForm","/inventory",x=>({...x,quantity:Number(x.quantity)}));
+$("#productsList").addEventListener("click",async e=>{const btn=e.target.closest(".publish-btn");if(!btn)return;try{await runAction("/products/"+btn.dataset.id+"/publish","POST",{});}catch{}});
+$("#createCartBtn").addEventListener("click",async()=>{try{const cart=await runAction("/carts","POST",{});state.cartId=cart.id;sessionStorage.setItem("nexusCartId",cart.id);$("#cartId").value=cart.id;await loadCart()}catch{}});
+$("#cartItemForm").addEventListener("submit",async e=>{e.preventDefault();try{const data=formData(e.currentTarget);const id=$("#cartId").value||state.cartId;if(!id)throw new Error("Primero crea un carrito.");state.cartId=id;await runAction("/carts/"+id+"/items","POST",{productId:data.productId,quantity:Number(data.quantity)});await loadCart()}catch(err){showGlobalError(err.message)}});
+$("#createOrderBtn").addEventListener("click",async()=>{const id=$("#cartId").value||state.cartId;if(!id){showGlobalError("Crea un carrito primero.");return}try{const order=await runAction("/orders","POST",{cartId:id});showMessage($("#globalMessage"),"Pedido creado: "+order.id+". Usa ese UUID en el formulario de pago.","success")}catch{}});
+$("#payForm").addEventListener("submit",async e=>{e.preventDefault();const x=formData(e.currentTarget);try{await runAction("/orders/"+x.orderId+"/pay","POST",{approved:x.approved==="true"})}catch{}});
+$("#invoiceForm").addEventListener("submit",async e=>{e.preventDefault();const x=formData(e.currentTarget);try{await runAction("/orders/"+x.orderId+"/invoice","POST",{});await api("/invoices")}catch(err){showGlobalError(err.message)}});
+$("#createShipmentsForm").addEventListener("submit",async e=>{e.preventDefault();const x=formData(e.currentTarget);try{await runAction("/orders/"+x.orderId+"/shipments","POST",{})}catch{}});
+$("#shipmentForm").addEventListener("submit",async e=>{e.preventDefault();const x=formData(e.currentTarget);try{await runAction("/shipments/"+x.shipmentId+"/"+x.action,"POST",{description:x.description})}catch{}});
+$("#returnRequestForm").addEventListener("submit",async e=>{e.preventDefault();const x=formData(e.currentTarget);try{await runAction("/orders/"+x.orderId+"/returns","POST",{productId:x.productId,quantity:Number(x.quantity),reason:x.reason})}catch{}});
+$("#returnApproveForm").addEventListener("submit",async e=>{e.preventDefault();const x=formData(e.currentTarget);try{await runAction("/returns/"+x.returnId+"/approve","POST",{})}catch{}});
+$("#returnReceiveForm").addEventListener("submit",async e=>{e.preventDefault();const x=formData(e.currentTarget);try{await runAction("/returns/"+x.returnId+"/receive","POST",{warehouseId:x.warehouseId,condition:x.condition});await api("/returns/"+x.returnId)}catch(err){showGlobalError(err.message)}});
+$("#refundForm").addEventListener("submit",async e=>{e.preventDefault();const x=formData(e.currentTarget);try{await runAction("/returns/"+x.returnId+"/refund","POST",{refundReference:x.refundReference})}catch{}});
+$("#sellerReportBtn").addEventListener("click",async()=>{const data=await load("/api/reports/seller",null);$("#sellerReport").textContent=JSON.stringify(data,null,2)});
+$("#adminReportBtn").addEventListener("click",async()=>{const data=await load("/api/reports/admin",null);$("#adminReport").textContent=JSON.stringify(data,null,2)});
+// La sesión no se restaura automáticamente al recargar: después de reiniciar
+// el servidor el token deja de ser válido y el usuario debe iniciar sesión.
+</script>
+</body>
+</html>
