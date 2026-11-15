@@ -176,6 +176,120 @@ class NexusMarketHttpServerTest {
             assertEquals(orderId,
                     json.readTree(orders.body()).get(0).path("id").asText());
 
+            HttpResponse<String> paid = request(
+                    baseUrl, "POST", "/api/orders/" + orderId + "/pay",
+                    buyerToken, "{\"approved\":true}");
+            assertEquals(200, paid.statusCode(), paid.body());
+
+            HttpResponse<String> afterPayment = request(
+                    baseUrl, "GET", "/api/orders/" + orderId, buyerToken, null);
+            assertEquals(200, afterPayment.statusCode());
+            assertTrue(json.readTree(afterPayment.body())
+                    .path("digitallyDeliveredProductIds").toString()
+                    .contains(digital.getId().toString()));
+
+            HttpResponse<String> loginLogistics = request(
+                    baseUrl, "POST", "/api/auth/login", null,
+                    """
+                    {"email":"logistica@nexusmarket.local","password":"Logistica123!"}
+                    """);
+            assertEquals(200, loginLogistics.statusCode());
+            String logisticsToken = json.readTree(loginLogistics.body())
+                    .path("token").asText();
+
+            HttpResponse<String> shipmentsCreated = request(
+                    baseUrl, "POST", "/api/orders/" + orderId + "/shipments",
+                    logisticsToken, "{}");
+            assertEquals(200, shipmentsCreated.statusCode(), shipmentsCreated.body());
+            String shipmentId = json.readTree(shipmentsCreated.body())
+                    .get(0).path("id").asText();
+            assertFalse(shipmentId.isBlank());
+
+            for (String transition : new String[] {
+                    "pack", "dispatch", "transit", "deliver"
+            }) {
+                HttpResponse<String> shipmentTransition = request(
+                        baseUrl, "POST", "/api/shipments/" + shipmentId
+                                + "/" + transition,
+                        logisticsToken,
+                        "{\"description\":\"Prueba automatizada " + transition + "\"}");
+                assertEquals(200, shipmentTransition.statusCode(),
+                        transition + ": " + shipmentTransition.body());
+            }
+
+            HttpResponse<String> deliveredOrder = request(
+                    baseUrl, "GET", "/api/orders/" + orderId, buyerToken, null);
+            assertEquals(200, deliveredOrder.statusCode());
+            assertEquals("DELIVERED",
+                    json.readTree(deliveredOrder.body()).path("status").asText());
+
+            HttpResponse<String> returnRequested = request(
+                    baseUrl, "POST", "/api/orders/" + orderId + "/returns",
+                    buyerToken,
+                    "{\"productId\":\"" + physical.getId()
+                            + "\",\"quantity\":1,\"reason\":\"Prueba de devolución\"}");
+            assertEquals(200, returnRequested.statusCode(), returnRequested.body());
+            String returnId = json.readTree(returnRequested.body())
+                    .path("id").asText();
+
+            HttpResponse<String> returnApproved = request(
+                    baseUrl, "POST", "/api/returns/" + returnId + "/approve",
+                    adminToken, "{}");
+            assertEquals(200, returnApproved.statusCode(), returnApproved.body());
+
+            HttpResponse<String> returnReceived = request(
+                    baseUrl, "POST", "/api/returns/" + returnId + "/receive",
+                    logisticsToken,
+                    "{\"warehouseId\":\"" + marketplace.getId()
+                            + "\",\"condition\":\"SELLABLE\"}");
+            assertEquals(200, returnReceived.statusCode(), returnReceived.body());
+
+            HttpResponse<String> returnReadByLogistics = request(
+                    baseUrl, "GET", "/api/returns/" + returnId,
+                    logisticsToken, null);
+            assertEquals(200, returnReadByLogistics.statusCode());
+            assertEquals("REFUND_PENDING",
+                    json.readTree(returnReadByLogistics.body())
+                            .path("status").asText());
+
+            HttpResponse<String> refund = request(
+                    baseUrl, "POST", "/api/returns/" + returnId + "/refund",
+                    adminToken, "{\"refundReference\":\"REFUND-HTTP-001\"}");
+            assertEquals(200, refund.statusCode(), refund.body());
+
+            HttpResponse<String> loginSeller = request(
+                    baseUrl, "POST", "/api/auth/login", null,
+                    """
+                    {"email":"seller.api@example.com","password":"Seller123!"}
+                    """);
+            assertEquals(200, loginSeller.statusCode());
+            String sellerToken = json.readTree(loginSeller.body())
+                    .path("token").asText();
+
+            HttpResponse<String> sellerReport = request(
+                    baseUrl, "GET", "/api/reports/seller", sellerToken, null);
+            assertEquals(200, sellerReport.statusCode(), sellerReport.body());
+            JsonNode report = json.readTree(sellerReport.body());
+            JsonNode physicalSales = null;
+            for (JsonNode item : report.path("salesByProduct")) {
+                if (physical.getId().toString().equals(
+                        item.path("productId").asText())) {
+                    physicalSales = item;
+                    break;
+                }
+            }
+            assertNotNull(physicalSales);
+            assertEquals(2, physicalSales.path("unitsSold").asInt());
+            assertEquals(1, physicalSales.path("unitsRefunded").asInt());
+            assertEquals(0, physicalSales.path("unitsInReturnProcess").asInt());
+            assertEquals(0, new BigDecimal("100000")
+                    .compareTo(physicalSales.path("grossSales").decimalValue()));
+            assertEquals(0, new BigDecimal("50000")
+                    .compareTo(physicalSales.path("refundedAmount").decimalValue()));
+            assertEquals(0, new BigDecimal("50000")
+                    .compareTo(physicalSales.path("netSalesAfterRefunds").decimalValue()));
+            assertEquals(1, report.path("availableInventory").asInt());
+
             HttpResponse<String> buyerInventory = request(
                     baseUrl, "GET", "/api/inventory", buyerToken, null);
             assertEquals(403, buyerInventory.statusCode());
