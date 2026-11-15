@@ -160,6 +160,7 @@ input,select,textarea{width:100%;border:1px solid var(--line);border-radius:9px;
               <label>Resultado</label><select name="approved"><option value="true">Aprobado</option><option value="false">Rechazado</option></select>
               <div class="form-actions"><button>Procesar pago</button></div>
             </form>
+            <form id="cancelOrderForm"><label>Cancelar pedido pendiente (UUID)</label><input name="orderId" required><p class="sub">Solo se pueden cancelar pedidos que aún estén pendientes de pago y no tengan envíos.</p><div class="form-actions"><button class="secondary">Cancelar pedido y liberar reserva</button></div></form>
             <form id="invoiceForm"><label>Emitir factura para pedido (UUID)</label><input name="orderId" required><div class="form-actions"><button class="secondary">Emitir factura</button></div></form>
             <hr class="divider"><h2>Facturas (GET)</h2><div id="invoicesList" class="data-list"></div>
           </div>
@@ -318,6 +319,7 @@ $("#createCartBtn").addEventListener("click",async()=>{try{const cart=await runA
 $("#cartItemForm").addEventListener("submit",async e=>{e.preventDefault();try{const data=formData(e.currentTarget);const id=$("#cartId").value||state.cartId;if(!id)throw new Error("Primero crea un carrito.");state.cartId=id;await runAction("/carts/"+id+"/items","POST",{productId:data.productId,quantity:Number(data.quantity)});await loadCart()}catch(err){showGlobalError(err.message)}});
 $("#createOrderBtn").addEventListener("click",async()=>{const id=$("#cartId").value||state.cartId;if(!id){showGlobalError("Crea un carrito primero.");return}try{const order=await runAction("/orders","POST",{cartId:id});showMessage($("#globalMessage"),"Pedido creado: "+order.id+". Usa ese UUID en el formulario de pago.","success")}catch{}});
 $("#payForm").addEventListener("submit",async e=>{e.preventDefault();const x=formData(e.currentTarget);try{await runAction("/orders/"+x.orderId+"/pay","POST",{approved:x.approved==="true"})}catch{}});
+$("#cancelOrderForm").addEventListener("submit",async e=>{e.preventDefault();const x=formData(e.currentTarget);if(!confirm("¿Cancelar este pedido pendiente? La reserva de inventario será liberada."))return;try{await runAction("/orders/"+x.orderId+"/cancel","POST",{});e.currentTarget.reset()}catch{}});
 $("#invoiceForm").addEventListener("submit",async e=>{e.preventDefault();const x=formData(e.currentTarget);try{await runAction("/orders/"+x.orderId+"/invoice","POST",{});await api("/invoices")}catch(err){showGlobalError(err.message)}});
 $("#createShipmentsForm").addEventListener("submit",async e=>{e.preventDefault();const x=formData(e.currentTarget);try{await runAction("/orders/"+x.orderId+"/shipments","POST",{})}catch{}});
 $("#shipmentForm").addEventListener("submit",async e=>{e.preventDefault();const x=formData(e.currentTarget);try{await runAction("/shipments/"+x.shipmentId+"/"+x.action,"POST",{description:x.description})}catch{}});
