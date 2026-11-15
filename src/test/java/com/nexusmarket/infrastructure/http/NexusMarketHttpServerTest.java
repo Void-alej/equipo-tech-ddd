@@ -118,6 +118,28 @@ class NexusMarketHttpServerTest {
                     ProductType.DIGITAL,
                     new BigDecimal("15000"));
             runtime.productService.publishProduct(seller, digital.getId());
+            Product secondPhysical = runtime.productService.createProduct(
+                    seller,
+                    "Segundo producto físico",
+                    "Segundo producto físico para comprobar aislamiento",
+                    ProductType.PHYSICAL,
+                    new BigDecimal("60000"));
+            runtime.productService.publishProduct(seller, secondPhysical.getId());
+            runtime.inventoryService.addStock(
+                    runtime.getLogisticsOperator(),
+                    secondPhysical.getId(),
+                    marketplace.getId(),
+                    2,
+                    "Stock inicial segundo producto");
+
+            Product secondDigital = runtime.productService.createProduct(
+                    seller,
+                    "Segundo manual digital",
+                    "Segundo artículo digital de prueba",
+                    ProductType.DIGITAL,
+                    new BigDecimal("20000"));
+            runtime.productService.publishProduct(seller, secondDigital.getId());
+
             runtime.authenticationService.setPassword(seller, "Seller123!");
 
             HttpResponse<String> loginBuyer = request(
@@ -153,8 +175,15 @@ class NexusMarketHttpServerTest {
                     baseUrl, "POST", "/api/carts/" + cartId + "/items",
                     buyerToken,
                     "{\"productId\":\"" + physical.getId()
-                            + "\",\"quantity\":2}");
+                            + "\",\"quantity\":1}");
             assertEquals(200, validAdd.statusCode(), validAdd.body());
+
+            HttpResponse<String> secondPhysicalAdd = request(
+                    baseUrl, "POST", "/api/carts/" + cartId + "/items",
+                    buyerToken,
+                    "{\"productId\":\"" + secondPhysical.getId()
+                            + "\",\"quantity\":1}");
+            assertEquals(200, secondPhysicalAdd.statusCode(), secondPhysicalAdd.body());
 
             HttpResponse<String> digitalAdd = request(
                     baseUrl, "POST", "/api/carts/" + cartId + "/items",
@@ -162,6 +191,13 @@ class NexusMarketHttpServerTest {
                     "{\"productId\":\"" + digital.getId()
                             + "\",\"quantity\":1}");
             assertEquals(200, digitalAdd.statusCode(), digitalAdd.body());
+
+            HttpResponse<String> secondDigitalAdd = request(
+                    baseUrl, "POST", "/api/carts/" + cartId + "/items",
+                    buyerToken,
+                    "{\"productId\":\"" + secondDigital.getId()
+                            + "\",\"quantity\":1}");
+            assertEquals(200, secondDigitalAdd.statusCode(), secondDigitalAdd.body());
 
             HttpResponse<String> orderCreated = request(
                     baseUrl, "POST", "/api/orders", buyerToken,
