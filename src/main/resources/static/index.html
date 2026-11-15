@@ -259,7 +259,10 @@ function listHtml(items,titleFn,detailFn,extraFn){if(!items||!items.length)retur
 async function refreshAll(){
  const checks=[["/api/me",null],["/api/products","productsList"],["/api/orders","ordersList"]];
  if(state.me.role!=="BUYER")checks.push(["/api/inventory","inventoryList"]);
- if(state.me.role==="BUYER")checks.push(["/api/buyer-profile/me",null]);
+ if(state.me.role==="BUYER"){
+   checks.push(["/api/buyer-profile/me",null]);
+   checks.push(["/api/invoices","invoicesList"]);
+ }
  if(["ADMINISTRATOR","SUPERVISOR","SELLER","LOGISTICS_OPERATOR"].includes(state.me.role))checks.push(["/api/warehouses","warehousesList"]);
  if(state.me.role!=="SELLER")checks.push(["/api/shipments","shipmentsList"]);
  if(["BUYER","ADMINISTRATOR","SELLER"].includes(state.me.role))checks.push(["/api/returns","returnsList"]);
@@ -313,7 +316,7 @@ $("#createCartBtn").addEventListener("click",async()=>{try{const cart=await runA
 $("#cartItemForm").addEventListener("submit",async e=>{e.preventDefault();try{const data=formData(e.currentTarget);const id=$("#cartId").value||state.cartId;if(!id)throw new Error("Primero crea un carrito.");state.cartId=id;await runAction("/carts/"+id+"/items","POST",{productId:data.productId,quantity:Number(data.quantity)});await loadCart()}catch(err){showGlobalError(err.message)}});
 $("#createOrderBtn").addEventListener("click",async()=>{const id=$("#cartId").value||state.cartId;if(!id){showGlobalError("Crea un carrito primero.");return}try{const order=await runAction("/orders","POST",{cartId:id});showMessage($("#globalMessage"),"Pedido creado: "+order.id+". Usa ese UUID en el formulario de pago.","success")}catch{}});
 $("#payForm").addEventListener("submit",async e=>{e.preventDefault();const x=formData(e.currentTarget);try{await runAction("/orders/"+x.orderId+"/pay","POST",{approved:x.approved==="true"})}catch{}});
-$("#invoiceForm").addEventListener("submit",async e=>{e.preventDefault();const x=formData(e.currentTarget);try{await runAction("/orders/"+x.orderId+"/invoice","POST",{})}catch{}});
+$("#invoiceForm").addEventListener("submit",async e=>{e.preventDefault();const x=formData(e.currentTarget);try{await runAction("/orders/"+x.orderId+"/invoice","POST",{});await api("/invoices")}catch(err){showGlobalError(err.message)}});
 $("#createShipmentsForm").addEventListener("submit",async e=>{e.preventDefault();const x=formData(e.currentTarget);try{await runAction("/orders/"+x.orderId+"/shipments","POST",{})}catch{}});
 $("#shipmentForm").addEventListener("submit",async e=>{e.preventDefault();const x=formData(e.currentTarget);try{await runAction("/shipments/"+x.shipmentId+"/"+x.action,"POST",{description:x.description})}catch{}});
 $("#returnRequestForm").addEventListener("submit",async e=>{e.preventDefault();const x=formData(e.currentTarget);try{await runAction("/orders/"+x.orderId+"/returns","POST",{productId:x.productId,quantity:Number(x.quantity),reason:x.reason})}catch{}});
