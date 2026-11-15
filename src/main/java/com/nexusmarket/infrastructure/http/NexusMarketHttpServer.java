@@ -127,7 +127,12 @@ public final class NexusMarketHttpServer {
         if ("GET".equals(method)) {
             if (p.length == 1 && "me".equals(p[0])) return userView(actor);
             if (p.length == 1 && "users".equals(p[0])) {
-                return runtime.userService.getAllUsers(actor);
+                return runtime.userService.getAllUsers(actor).stream()
+                        .map(this::userView).toList();
+            }
+            if (p.length == 2 && "buyer-profile".equals(p[0])
+                    && "me".equals(p[1])) {
+                return runtime.buyerService.getMyProfile(actor);
             }
             if (p.length == 1 && "products".equals(p[0])) {
                 return productsFor(actor);
