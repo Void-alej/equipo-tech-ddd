@@ -80,6 +80,7 @@ public class CartService {
                 product.getPrice(),
                 quantity
         );
+        persistCart(cart);
 
         return cart;
     }
@@ -94,6 +95,7 @@ public class CartService {
         ensureActiveCart(cart);
 
         cart.removeItem(productId);
+        persistCart(cart);
         return cart;
     }
 
@@ -131,6 +133,7 @@ public class CartService {
         ensureActiveCart(cart);
 
         cart.convert();
+        persistCart(cart);
         return cart;
     }
 
@@ -139,6 +142,7 @@ public class CartService {
         authorizeCartOwner(actor, cart);
 
         cart.restoreConversion();
+        persistCart(cart);
         return cart;
     }
 
@@ -148,7 +152,12 @@ public class CartService {
         ensureActiveCart(cart);
 
         cart.cancel();
+        persistCart(cart);
         return cart;
+    }
+
+    private void persistCart(Cart cart) {
+        carts.put(cart.getId(), cart);
     }
 
     private void requireActiveBuyer(User actor) {
