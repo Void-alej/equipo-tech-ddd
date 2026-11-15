@@ -24,6 +24,7 @@ import com.nexusmarket.domain.ports.out.ShipmentRepository;
 import com.nexusmarket.domain.ports.out.ProductRepository;
 import com.nexusmarket.domain.ports.out.UserRepository;
 import com.nexusmarket.domain.ports.out.WarehouseRepository;
+import com.nexusmarket.infrastructure.repositories.PersistentConcurrentMap;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -49,9 +50,9 @@ public class OrderService {
     private final ShipmentRepository shipmentRepository;
 
     private final Map<UUID, List<Reservation>> reservations =
-            new ConcurrentHashMap<>();
+            PersistentConcurrentMap.create("order-reservations");
 
-    private record Reservation(UUID productId, UUID warehouseId, int quantity) {}
+    private record Reservation(UUID productId, UUID warehouseId, int quantity) implements java.io.Serializable {}
 
     // Constructor compatible con las pruebas y usos anteriores.
     public OrderService(
