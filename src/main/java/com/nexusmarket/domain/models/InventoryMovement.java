@@ -5,7 +5,7 @@ import com.nexusmarket.domain.enums.InventoryMovementType;
 import java.time.LocalDateTime;
 import java.util.UUID;
 
-public class InventoryMovement {
+public class InventoryMovement implements java.io.Serializable {
 
     private final UUID id;
     private final UUID inventoryId;
