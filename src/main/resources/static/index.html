@@ -259,6 +259,7 @@ function listHtml(items,titleFn,detailFn,extraFn){if(!items||!items.length)retur
 async function refreshAll(){
  const checks=[["/api/me",null],["/api/products","productsList"],["/api/orders","ordersList"]];
  if(state.me.role!=="BUYER")checks.push(["/api/inventory","inventoryList"]);
+ if(state.me.role==="BUYER")checks.push(["/api/buyer-profile/me",null]);
  if(["ADMINISTRATOR","SUPERVISOR","SELLER","LOGISTICS_OPERATOR"].includes(state.me.role))checks.push(["/api/warehouses","warehousesList"]);
  if(state.me.role!=="SELLER")checks.push(["/api/shipments","shipmentsList"]);
  if(["BUYER","ADMINISTRATOR","SELLER"].includes(state.me.role))checks.push(["/api/returns","returnsList"]);
@@ -302,7 +303,7 @@ $("#loginForm").addEventListener("submit",async e=>{
 $("#logoutBtn").addEventListener("click",async()=>{try{await api("/auth/logout","POST",{})}catch{}state.token=null;state.me=null;sessionStorage.removeItem("nexusToken");$("#app").style.display="none";$("#loginView").style.display="grid"});
 $("#refreshBtn").addEventListener("click",()=>refreshAll().catch(e=>showGlobalError(e.message)));
 $$(".nav-btn").forEach(btn=>btn.addEventListener("click",()=>showSection(btn.dataset.section)));
-bindForm("buyerForm","/buyers",x=>({...x,additionalAddresses:x.additionalAddresses?x.additionalAddresses.split(";").map(v=>v.trim()).filter(Boolean):[]}));
+bindForm("buyerForm","/buyers",x=>({...x,additionalAddresses:x.additionalAddresses?x.additionalAddresses.split(";").map(v=>v.trim()).filter(Boolean):[]}),async result=>{await api("/buyers/"+result.user.id+"/profile");});
 bindForm("sellerForm","/sellers");
 bindForm("operatorForm","/logistics-operators");
 bindForm("productForm","/products",x=>({...x,price:Number(x.price)}));
@@ -317,7 +318,7 @@ $("#createShipmentsForm").addEventListener("submit",async e=>{e.preventDefault()
 $("#shipmentForm").addEventListener("submit",async e=>{e.preventDefault();const x=formData(e.currentTarget);try{await runAction("/shipments/"+x.shipmentId+"/"+x.action,"POST",{description:x.description})}catch{}});
 $("#returnRequestForm").addEventListener("submit",async e=>{e.preventDefault();const x=formData(e.currentTarget);try{await runAction("/orders/"+x.orderId+"/returns","POST",{productId:x.productId,quantity:Number(x.quantity),reason:x.reason})}catch{}});
 $("#returnApproveForm").addEventListener("submit",async e=>{e.preventDefault();const x=formData(e.currentTarget);try{await runAction("/returns/"+x.returnId+"/approve","POST",{})}catch{}});
-$("#returnReceiveForm").addEventListener("submit",async e=>{e.preventDefault();const x=formData(e.currentTarget);try{await runAction("/returns/"+x.returnId+"/receive","POST",{warehouseId:x.warehouseId,condition:x.condition})}catch{}});
+$("#returnReceiveForm").addEventListener("submit",async e=>{e.preventDefault();const x=formData(e.currentTarget);try{await runAction("/returns/"+x.returnId+"/receive","POST",{warehouseId:x.warehouseId,condition:x.condition});await api("/returns/"+x.returnId)}catch(err){showGlobalError(err.message)}});
 $("#refundForm").addEventListener("submit",async e=>{e.preventDefault();const x=formData(e.currentTarget);try{await runAction("/returns/"+x.returnId+"/refund","POST",{refundReference:x.refundReference})}catch{}});
 $("#sellerReportBtn").addEventListener("click",async()=>{const data=await load("/api/reports/seller",null);$("#sellerReport").textContent=JSON.stringify(data,null,2)});
 $("#adminReportBtn").addEventListener("click",async()=>{const data=await load("/api/reports/admin",null);$("#adminReport").textContent=JSON.stringify(data,null,2)});
