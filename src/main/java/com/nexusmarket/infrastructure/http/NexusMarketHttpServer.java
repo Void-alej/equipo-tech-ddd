@@ -291,6 +291,10 @@ public final class NexusMarketHttpServer {
                     actor, uuid(p[1]), body.path("approved").asBoolean(false));
         }
 
+        if (p.length == 3 && "orders".equals(p[0]) && "cancel".equals(p[2])) {
+            return runtime.orderService.cancelOrder(actor, uuid(p[1]));
+        }
+
         if (p.length == 3 && "orders".equals(p[0]) && "invoice".equals(p[2])) {
             return runtime.invoiceService.issueInvoice(actor, uuid(p[1]));
         }
