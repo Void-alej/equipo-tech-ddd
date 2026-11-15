@@ -13,7 +13,7 @@ public class InMemoryInventoryMovementRepository
         implements InventoryMovementRepository {
 
     private final ConcurrentMap<UUID, InventoryMovement> movements =
-            new ConcurrentHashMap<>();
+            PersistentConcurrentMap.create("inventory-movements");
 
     @Override
     public InventoryMovement save(InventoryMovement movement) {
