@@ -161,6 +161,7 @@ input,select,textarea{width:100%;border:1px solid var(--line);border-radius:9px;
               <div class="form-actions"><button>Procesar pago</button></div>
             </form>
             <form id="invoiceForm"><label>Emitir factura para pedido (UUID)</label><input name="orderId" required><div class="form-actions"><button class="secondary">Emitir factura</button></div></form>
+            <hr class="divider"><h2>Facturas (GET)</h2><div id="invoicesList" class="data-list"></div>
           </div>
         </div>
       </section>
@@ -287,6 +288,7 @@ function renderCollection(id,data){
  if(id==="ordersList")html=listHtml(items,x=>x.orderId||x.id,x=>(x.status||"")+" · Pago "+(x.paymentStatus||"")+" · "+(x.items?.length||0)+" artículo(s)");
  if(id==="shipmentsList")html=listHtml(items,x=>x.id,x=>"Pedido "+x.orderId+" · estado "+x.status);
  if(id==="returnsList")html=listHtml(items,x=>x.productName,x=>x.status+" · cantidad "+x.quantity+" · reembolso "+x.refundAmount);
+ if(id==="invoicesList")html=listHtml(items,x=>"Factura · pedido "+x.orderId,x=>"Total $"+x.total+" · emitida "+x.issuedAt);
  $("#"+id).innerHTML=html||'<div class="empty">Sin registros o consulta no disponible.</div>';
 }
 async function loadCart(){if(!state.cartId)return;$("#cartId").value=state.cartId;const cart=await api("/api/carts/"+state.cartId);$("#cartView").textContent=JSON.stringify(cart,null,2)}
