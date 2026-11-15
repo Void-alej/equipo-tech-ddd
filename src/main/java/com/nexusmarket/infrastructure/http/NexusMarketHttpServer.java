@@ -20,6 +20,8 @@ import java.net.InetSocketAddress;
 import java.nio.charset.StandardCharsets;
 import java.util.*;
 import java.util.stream.Collectors;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 
 /**
  * API HTTP y punto de entrada para la interfaz de demostración.
@@ -33,6 +35,7 @@ public final class NexusMarketHttpServer {
     private final NexusMarketRuntime runtime;
     private final ObjectMapper json;
     private final HttpServer server;
+    private final ExecutorService executor;
 
     public NexusMarketHttpServer(NexusMarketRuntime runtime, int port)
             throws IOException {
@@ -43,15 +46,21 @@ public final class NexusMarketHttpServer {
 
         this.server = HttpServer.create(new InetSocketAddress(port), 0);
         this.server.createContext("/", this::handle);
-        this.server.setExecutor(java.util.concurrent.Executors.newFixedThreadPool(8));
+        this.executor = Executors.newFixedThreadPool(8);
+        this.server.setExecutor(executor);
     }
 
     public void start() {
         server.start();
     }
 
+    public int getPort() {
+        return server.getAddress().getPort();
+    }
+
     public void stop(int delaySeconds) {
         server.stop(delaySeconds);
+        executor.shutdownNow();
     }
 
     private void handle(HttpExchange exchange) throws IOException {
